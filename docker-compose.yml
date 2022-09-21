@@ -1,0 +1,18 @@
+version: '3'
+ 
+services:
+  db:
+    image: postgres:14.3
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      # Si no declaro nombre por defecto es "postgres"  
+      # POSTGRES_USER: ${DB_USERNAME}
+    container_name: gastos_app
+    volumes: 
+      - psql:/var/lib/postgresql/data
+volumes:
+  psql:
