@@ -30,6 +30,6 @@ import { AccountsModule } from '../accounts/accounts.module';
       }
     })
   ],
-  exports: [TypeOrmModule, PassportModule, JwtModule, JwtStrategy]
+  exports: [TypeOrmModule, PassportModule, JwtModule, JwtStrategy, AuthService]
 })
 export class AuthModule {}

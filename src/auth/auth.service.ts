@@ -20,9 +20,9 @@ export class AuthService {
 
   constructor(
     @InjectRepository(User)
-    private readonly userRepository:Repository<User>,
-    private readonly jwtService:JwtService,
-    private readonly configService:ConfigService
+    public userRepository:Repository<User>,
+    public jwtService:JwtService,
+    public configService:ConfigService
   ){}
 
   async create(createAuthDto: CreateUserDto) {
@@ -32,33 +32,6 @@ export class AuthService {
     try {
       const user = this.userRepository.create({
         password: bcrypt.hashSync(password, 10),
-        ...rest
-      });
-      await this.userRepository.save(user)
-
-      delete user.password;
-      
-      return {
-        ...user,
-        accounts:[],
-        token: this.generateToken({id:user.id})
-      };
-      
-    } catch (error) {
-      this.handleExceptions(error);
-    }
-  }
-
-  async createAdmin(createAuthDto: CreateUserDto) {
-
-    const {password, ...rest} = createAuthDto;
-
-    try {
-      await this.existAdmin()
-
-      const user = this.userRepository.create({
-        password: bcrypt.hashSync(password, 10),
-        roles:[ ValidRoles.ADMIN ],
         ...rest
       });
       await this.userRepository.save(user)
@@ -223,27 +196,11 @@ export class AuthService {
     }
   }
 
-  private async existAdmin(){
-    try {
-      const queryBuilder = this.userRepository.createQueryBuilder()
-      const existAdmin = await queryBuilder
-        .where('roles && :roles',{ roles: [ValidRoles.ADMIN]})
-        .getOne()
-
-      if(existAdmin) return this.handleExceptions({
-        ok:false,
-        message: "Already exist an Admin"
-      });
-    } catch (error) {
-      this.handleExceptions(error)
-    }
-  }
-
-  private generateToken(payload:JwtPayload){
+  generateToken(payload:JwtPayload){
     return this.jwtService.sign(payload)
   }
 
-  private handleExceptions(error:any){
+  handleExceptions(error:any){
     
     if (error.code === '23505') {
       throw new BadRequestException(error.detail);

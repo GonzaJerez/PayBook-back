@@ -24,13 +24,6 @@ export class AuthController {
     return this.authService.create(createUserDto);
   }
 
-  @Post('register/admin')
-  @ApiCreatedResponse({description:'Admin was created', type:User})
-  @ApiBadRequestResponse({description:'Bad request'})
-  createAdmin(@Body() createUserDto: CreateUserDto) {
-    return this.authService.createAdmin(createUserDto);
-  }
-
   @Get()
   @ApiOkResponse({description:'Users was founded', type:[User]})
   @ApiBadRequestResponse({description:'Bad request'})
