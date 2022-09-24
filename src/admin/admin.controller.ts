@@ -1,12 +1,12 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiCreatedResponse } from '@nestjs/swagger';
-import { AuthController } from 'src/auth/auth.controller';
-import { AuthService } from 'src/auth/auth.service';
-import { CreateUserDto } from 'src/auth/dto/create-user.dto';
-import { User } from 'src/auth/entities/user.entity';
+import { AuthController } from '../auth/auth.controller';
+import { AuthService } from '../auth/auth.service';
+import { CreateUserDto } from '../users/dtos/create-user.dto';
+import { User } from '../users/entities/user.entity';
 import { AdminService } from './admin.service';
 
-@Controller('admin')
+@Controller()
 export class AdminController extends AuthController {
 
   constructor(
@@ -16,7 +16,7 @@ export class AdminController extends AuthController {
     super(authService);
   }
 
-  @Post('register')
+  @Post('admin/register')
   @ApiCreatedResponse({description:'Admin was created', type:User})
   @ApiBadRequestResponse({description:'Bad request'})
   createAdmin(@Body() createUserDto: CreateUserDto) {

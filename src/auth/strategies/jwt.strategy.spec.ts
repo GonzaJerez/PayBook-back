@@ -2,8 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
-import { User } from '../entities/user.entity';
-import { mockCompleteUser } from '../mocks/userMocks';
+import { User } from '../../users/entities/user.entity';
+import { mockCompleteUser } from '../../users/mocks/userMocks';
 import { JwtStrategy } from './jwt.strategy';
 
 

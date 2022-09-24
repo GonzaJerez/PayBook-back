@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto } from '../users/dtos/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
-import { mockCreateUser, mockCompleteUser, mockUserToLogin, mockUserToUpdate } from './mocks/userMocks';
+import { UpdateUserDto } from '../users/dtos/update-user.dto';
+import { User } from '../users/entities/user.entity';
+import { mockCreateUser, mockCompleteUser, mockUserToLogin, mockUserToUpdate } from '../users/mocks/userMocks';
 
 describe('AuthController', () => {
   let controller: AuthController;

@@ -1,4 +1,5 @@
-import { IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { Type } from "class-transformer";
+import { IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateAccountDto {
 
@@ -10,5 +11,11 @@ export class CreateAccountDto {
     @IsString()
     @IsOptional()
     @MaxLength(80)
-    description: string;
+    description?: string;
+    
+    @IsOptional()
+    @Min(1)
+    @Max(10)
+    @Type(()=>Number)
+    max_num_users?: number;
 }

@@ -12,6 +12,6 @@ import { Account } from './entities/account.entity';
     TypeOrmModule.forFeature([Account]),
     AuthModule
   ],
-  // exports: [TypeOrmModule]
+  exports: [TypeOrmModule]
 })
 export class AccountsModule {}

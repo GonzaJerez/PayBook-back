@@ -5,10 +5,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt'
 
 import { AuthService } from './auth.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
-import { mockCompleteUser, mockCreateUser, mockUserToLogin, mockUserToUpdate } from './mocks/userMocks';
+import { CreateUserDto } from '../users/dtos/create-user.dto';
+import { UpdateUserDto } from '../users/dtos/update-user.dto';
+import { User } from '../users/entities/user.entity';
+import { mockCompleteUser, mockCreateUser, mockUserToLogin, mockUserToUpdate } from '../users/mocks/userMocks';
 
 describe('AuthService', () => {
   let service: AuthService;

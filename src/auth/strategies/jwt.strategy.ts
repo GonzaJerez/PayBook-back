@@ -6,7 +6,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import { Repository } from "typeorm";
 
 import { JwtPayload } from "../interfaces/jwt-payload.interface";
-import { User } from "../entities/user.entity";
+import { User } from "../../users/entities/user.entity";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy){
@@ -29,7 +29,10 @@ export class JwtStrategy extends PassportStrategy(Strategy){
         const {id} = jwtPayload;
 
         // Busca usuario en DB por id
-        const user = await this.userRepository.findOneBy({id})
+        const user = await this.userRepository.findOne({
+            where:{id},
+            relations:{accounts:true}
+        })
 
         // Si no existe usuario con mail recibido en token
         if(!user)

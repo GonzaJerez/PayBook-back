@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Account } from '../../accounts/entities/account.entity';
 import {Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn} from 'typeorm'
-import { ValidRoles } from '../interfaces';
+import { ValidRoles } from '../../auth/interfaces';
 
 @Entity('users')
 export class User {
@@ -64,20 +64,32 @@ export class User {
     @ManyToMany(
         ()=>Account,
         account => account.users,
-        {cascade:true,eager:true}
+        {cascade:true}
     )
-    @JoinTable()
+    @JoinTable(/* {
+        name: 'users_accounts',
+        inverseJoinColumn: {
+            name: 'account_id',
+            referencedColumnName: 'id'
+        },
+        joinColumn:{
+            name: 'user_id',
+            referencedColumnName: 'id'
+        }
+    } */)
     accounts?: Account[]
 
     @OneToMany(
         ()=>Account,
-        account => account.creator_user
+        account => account.creator_user,
+        // {eager: true}
     )
     accounts_owner?: Account[]
 
     @OneToMany(
         ()=>Account,
-        account => account.admin_user
+        account => account.admin_user,
+        // {eager: true}
     )
     accounts_admin?: Account[]
 }

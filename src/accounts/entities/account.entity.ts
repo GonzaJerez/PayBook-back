@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { User } from "../../auth/entities/user.entity";
+import { User } from "../../users/entities/user.entity";
 import { Column, Entity, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('accounts')
@@ -30,6 +30,16 @@ export class Account {
     description: string;
 
     @ApiProperty({
+        example: 5,
+        default: 10,
+        description: 'Maximum number of users that can access the account',
+    })
+    @Column('int',{
+        default:10
+    })
+    max_num_users: number;
+
+    @ApiProperty({
         example: '8c0b9bf0',
         description: 'Key to access to an account',
         uniqueItems: true
@@ -53,7 +63,8 @@ export class Account {
     })
     @ManyToMany(
         ()=> User,
-        user => user.accounts
+        user => user.accounts,
+        {onDelete: 'CASCADE'}
     )
     users: User[];
 

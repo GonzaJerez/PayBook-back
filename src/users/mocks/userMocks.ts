@@ -1,31 +1,39 @@
-import { CreateUserDto } from "../dto/create-user.dto"
-import { LoginUserDto } from "../dto/login-user.dto"
-import { UpdateUserDto } from "../dto/update-user.dto"
+import * as bcrypt from 'bcrypt'
+
+import { CreateUserDto } from "../dtos/create-user.dto"
+import { LoginUserDto } from "../../auth/dto/login-user.dto"
+import { UpdateUserDto } from "../dtos/update-user.dto"
 import { User } from "../entities/user.entity"
-import { ValidRoles } from "../interfaces"
+import { ValidRoles } from "../../auth/interfaces"
 
 export const mockAdminUser:CreateUserDto = {
     email: "admin@gmail.com",
-    password: "Abc123",
+    password: bcrypt.hashSync('Abc123', 10),
     fullName: "Admin"
 }
 
 export const mockAdminUser2:CreateUserDto = {
     email: "admin2@gmail.com",
-    password: "Abc123",
+    password: bcrypt.hashSync('Abc123', 10),
     fullName: "Admin2"
 }
 
 export const mockCreateUser:CreateUserDto = {
     email: 'test@gmail.com',
     fullName: 'Test',
-    password: 'Abc123'
+    password: bcrypt.hashSync('Abc123', 10),
 }
 
 export const mockCreateUser2:CreateUserDto = {
     email: 'test2@gmail.com',
     fullName: 'Test2',
-    password: 'Abc123'
+    password: bcrypt.hashSync('Abc123', 10),
+}
+
+export const mockCreateUser3:CreateUserDto = {
+    email: 'test3@gmail.com',
+    fullName: 'Test3',
+    password: bcrypt.hashSync('Abc123', 10),
 }
 
 export const mockCompleteUser:User = {

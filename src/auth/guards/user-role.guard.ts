@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 
-import { User } from '../entities/user.entity';
+import { User } from '../../users/entities/user.entity';
 
 export const META_ROLES = 'roles'
 
