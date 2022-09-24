@@ -1,79 +1,123 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {Repository} from 'typeorm';
 
 import {Account} from '../accounts/entities/account.entity';
 import {User} from '../users/entities/user.entity';
-import {mockAdminUser, mockAdminUser2, mockCreateUser, mockCreateUser2, mockCreateUser3} from '../users/mocks/userMocks';
+import {adminTest,user1,user2,user3,account1,account2,account3} from './mocks/seedMock';
 import {generateAccountAccessKey} from '../common/helpers/generateAccountAccessKey';
-import {mockToCreateAccount, mockToCreateSecondAccount, mockToCreateThirdAccount} from '../accounts/mocks/accountMocks';
 import {ValidRoles} from '../auth/interfaces';
+import {JwtService} from '@nestjs/jwt';
 
 @Injectable()
 export class SeedService {
+
+  private readonly logger = new Logger('SeedService')
 
   constructor(
     @InjectRepository(User)
     private readonly userRepository:Repository<User>,
     @InjectRepository(Account)
     private readonly accountRepository:Repository<Account>,
+    private readonly jwtService:JwtService
   ){}
 
   async executeSeed(){
       try {
-        // Limpiar DB
-        await this.accountRepository.delete({})
-        await this.userRepository.delete({})
+        await this.cleanDB()
 
         // Crear admins
-        const admins = this.userRepository.create([
-          {
-            ...mockAdminUser,
+        const admin = this.userRepository.create({
+            ...adminTest,
             roles: [ValidRoles.ADMIN]
-          },
-          {
-            ...mockAdminUser2,
-            roles: [ValidRoles.ADMIN]
-          },
-        ])
+          }
+        )
 
         // Crear users with 3 accounts each
         const users = this.userRepository.create([
-          mockCreateUser,
-          mockCreateUser2,
-          mockCreateUser3
+          user1,
+          user2,
+          user3
         ])
 
-        users.forEach(user =>{
-          const accounts = this.accountRepository.create([
-            {
-              ...mockToCreateAccount, 
-              access_key: generateAccountAccessKey(),
-            },
-            {
-              ...mockToCreateSecondAccount, 
-              access_key: generateAccountAccessKey(),
-            },
-            {
-              ...mockToCreateThirdAccount, 
-              access_key: generateAccountAccessKey(),
-            },
-          ]);
+        users.forEach((user,idx) =>{
+          let accounts:Account[]
 
+          if(idx === 0){
+            accounts = this.accountRepository.create([
+              {
+                ...account1, 
+                access_key: generateAccountAccessKey(),
+              },
+              {
+                ...account2, 
+                access_key: generateAccountAccessKey(),
+              },
+              {
+                ...account3, 
+                access_key: generateAccountAccessKey(),
+              },
+            ]);
+
+          } else {
+            accounts = this.accountRepository.create([
+              {
+                ...account1, 
+                access_key: generateAccountAccessKey(),
+              },
+              {
+                ...account2, 
+                access_key: generateAccountAccessKey(),
+              },
+            ]);
+
+          }
           user.accounts = accounts
           user.accounts_admin = accounts
-          user.accounts_owner = accounts
+          user.accounts_owner = accounts      
         })
 
         // Save all users and admins with their accounts
-        await this.userRepository.save([...users,...admins])
+        await this.userRepository.save([...users, admin])
 
-        return {message:'Seed executed'}
+        delete admin.password
+
+        return {
+          message:'Seed executed',
+          users: users.map( user => {
+            const token = this.jwtService.sign({id:user.id})
+            delete user.password;
+            return {...user, token}
+          }),
+          admin: {
+            ...admin,
+            token: this.jwtService.sign({id:admin.id})
+          }
+        }
 
       } catch (error) {
-        console.log(error);
-        
+        this.handleExceptions(error)
       }
+  }
+
+  async cleanDB(){
+    try {
+      // Limpiar DB
+      await this.accountRepository.delete({})
+      await this.userRepository.delete({})
+
+      return {
+        message: 'DB cleaned'
+      }
+
+    } catch (error) {
+      this.handleExceptions(error)
+    }
+  }
+
+  handleExceptions(error:any){
+    this.logger.error(error)
+    throw new InternalServerErrorException(error)
   }
 
 }

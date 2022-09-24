@@ -1,5 +1,5 @@
 import { ConfigService } from "@nestjs/config";
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
@@ -40,7 +40,7 @@ export class JwtStrategy extends PassportStrategy(Strategy){
 
         // Si el usuario está inactivo
         if(!user.isActive)
-            throw new UnauthorizedException(`User deleted. Contact the admin`)
+            throw new ForbiddenException(`User deleted. Contact the admin`)
         
         // Retorna el usuario, este va a estar disponible
         // en la req para todos mis endpoints

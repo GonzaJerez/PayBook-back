@@ -165,22 +165,6 @@ export class UsersService extends AuthService {
         }
     }
 
-    /**
-     * Elimina todos los usuarios (solo desarrollo)
-     */
-    async cleanUsers(){
-        if (this.configService.get('STAGE') !== 'dev')
-        throw new ForbiddenException(`Option only can be used in dev`)
-
-        try {
-          await this.accountRepository.delete({})
-          await this.userRepository.delete({})
-          return {message:'Users table clean'}
-        } catch (error) {
-          this.handleExceptions(error)
-        }
-    }
-
     async becomePremium(user:User){
 
       // TODO: Implementacion de pago

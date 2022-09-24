@@ -3,13 +3,12 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 
 import { AppModule } from '../src/app.module';
-import { mockCreateUser } from '../src/users/mocks/userMocks';
-import { User } from '../src/users/entities/user.entity';
+import {UserWithToken} from '../src/users/interfaces/UserWithToken.interface';
+import {mockUser1ToLogin} from '../src/users/mocks/userMocks';
 
-describe('Auth (e2e)', () => {
+describe('AuthController (e2e)', () => {
   let app: INestApplication;
-  let userTest: User;
-  let userTokenTest: string;
+  let seedUsers:UserWithToken[]
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -26,39 +25,32 @@ describe('Auth (e2e)', () => {
     )
 
     await app.init();
-
-    await request(app.getHttpServer())
-      .get('/users/test/clean')
-
-    await request(app.getHttpServer())
-      .post('/users/register')
-      .send(mockCreateUser)
-      .then(res => {
-        userTokenTest = res.body.token;
-
-        delete res.body.token;
-        userTest = res.body;
-      })
   });
 
   afterAll(async () => {
     await app.close();
   });
 
+  beforeEach(async()=>{
+    await request(app.getHttpServer())
+      .get('/seed')
+      .expect(200)
+      .then(res => {
+        seedUsers = res.body.users
+      })
+  })
+
   describe('login - /auth/login (POST)', () => {
 
     it('should login user when credentials are corrects', async () => {
       await request(app.getHttpServer())
         .post(`/auth/login`)
-        .send({
-          email: mockCreateUser.email,
-          password: mockCreateUser.password
-        })
+        .send(mockUser1ToLogin)
         .expect(200)
         .then(res => {
           expect(res.body).toEqual({
-            id: userTest.id,
-            email: userTest.email,
+            id: seedUsers[0].id,
+            email: seedUsers[0].email,
             token: expect.any(String)
           })
         })
@@ -68,7 +60,7 @@ describe('Auth (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/auth/login`)
         .send({
-          email: mockCreateUser.email,
+          email: mockUser1ToLogin.email,
           password: 'ABC'
         })
         .expect(400)
@@ -88,7 +80,7 @@ describe('Auth (e2e)', () => {
         .post(`/auth/login`)
         .send({
           email: 'otroemailgmail.com',
-          password: mockCreateUser.password
+          password: mockUser1ToLogin.password
         })
         .expect(400)
         .then(res => {          
@@ -102,11 +94,11 @@ describe('Auth (e2e)', () => {
         })
     })
 
-    it('should return an Unauthorized error user when credentials are incorrect', async () => {
+    it('should return an Unauthorized error user when credentials (password) are incorrect', async () => {
       await request(app.getHttpServer())
         .post(`/auth/login`)
         .send({
-          email: mockCreateUser.email,
+          email: mockUser1ToLogin.email,
           password: 'Abc1234'
         })
         .expect(401,{
@@ -116,12 +108,12 @@ describe('Auth (e2e)', () => {
         })
     })
 
-    it('should return an Unauthorized error user when credentials are incorrect', async () => {
+    it('should return an Unauthorized error user when credentials (email) are incorrect', async () => {
       await request(app.getHttpServer())
         .post(`/auth/login`)
         .send({
           email: 'otro-test@gmail.com',
-          password: mockCreateUser.password
+          password: mockUser1ToLogin.password
         })
         .expect(401,{
           error: 'Unauthorized',

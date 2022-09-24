@@ -41,8 +41,46 @@ describe('SeedController (e2e)', () => {
     it('should execute a seed', async () => {
       await request(app.getHttpServer())
         .get('/seed')
+        .expect(200)
+        .then(res =>{
+          expect(res.body.message).toBe('Seed executed')
+          expect(res.body.users).toHaveLength(3)
+          expect(res.body.users[0]).toMatchObject({
+            email: expect.any(String),
+            fullName: expect.any(String),
+            id: expect.any(String),
+            isActive: true,
+            token: expect.any(String),
+            accounts: expect.any(Object),
+            accounts_admin: expect.any(Object),
+            accounts_owner: expect.any(Object),
+          })
+          expect(res.body.admin).toMatchObject({
+            email: expect.any(String),
+            fullName: expect.any(String),
+            id: expect.any(String),
+            isActive: true,
+            token: expect.any(String),
+          })
+        })
+    })
+  })
+
+  describe('cleanDB - /seed/clean (GET)', () => {
+
+    it('should return a Forbidden error when try to execute seed on non development environment', async () => {
+      process.env.STAGE = 'prod'
+      await request(app.getHttpServer())
+        .get('/seed/clean')
+        .expect(403)
+      process.env.STAGE = 'dev'
+    })
+
+    it('should clean DB', async () => {
+      await request(app.getHttpServer())
+        .get('/seed/clean')
         .expect(200,{
-          message:'Seed executed'
+          message: 'DB cleaned'
         })
     })
   })

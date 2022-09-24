@@ -103,11 +103,4 @@ export class UsersController extends AuthController {
   ){
     return this.usersService.becomePremium(user)
   }
-
-  @Get('test/clean')
-  @ApiOkResponse({description:'Table users was cleaned for testing', type:User})
-  @ApiForbiddenResponse({description:'Forbidden. Only himself user and admins'})
-  clearUsers() {
-    return this.usersService.cleanUsers();
-  }
 }

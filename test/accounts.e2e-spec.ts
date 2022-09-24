@@ -3,27 +3,13 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 
 import { AppModule } from '../src/app.module';
-import { Account } from '../src/accounts/entities/account.entity';
-import { mockAdminUserOnAccountTest, mockCreateUser2OnAccountTest, mockCreateUser3OnAccountTest, mockCreateUserOnAccountTest, mockExampleUUID, mockToCreateAccount, mockToUpdateAccount } from '../src/accounts/mocks/accountMocks';
-import { User } from '../src/users/entities/user.entity';
-import { mockAdminUser, mockCreateUser, mockCreateUser2, mockCreateUser3 } from '../src/users/mocks/userMocks';
-import { ValidRoles } from '../src/auth/interfaces';
+import {UserWithToken} from '../src/users/interfaces/UserWithToken.interface';
+import {fakeAccountUUID, mockToCreateAccount, mockToUpdateAccount} from '../src/accounts/mocks/accountMocks';
 
-describe('Accounts (e2e)', () => {
+describe('AccountsController (e2e)', () => {
   let app: INestApplication;
-
-  // Users for test
-  let userTest: User;
-  let userTokenTest: string;
-  let adminTokenTest: string;
-  let thirdUserTest: User;
-  let thirdUserTokenTest: string;
-  let fourthUserTokenTest: string;
-
-  // Accounts created
-  let accountTest: Account;
-  let accountTest2: Account;
-  let accountTest3: Account;
+  let seedUsers:UserWithToken[]
+  let seedAdmin:UserWithToken
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -40,54 +26,21 @@ describe('Accounts (e2e)', () => {
     )
 
     await app.init();
-
-    // Limpia todos los usuarios existentes
-    await request(app.getHttpServer())
-      .get('/users/test/clean')
-
-    // Crea 2 usuarios comunes y un administrador
-    await Promise.all([
-      request(app.getHttpServer())
-        .post('/admin/register')
-        .send(mockAdminUserOnAccountTest)
-        .then(res => {
-          adminTokenTest = res.body.token;
-      }),
-      request(app.getHttpServer())
-        .post('/users/register')
-        .send(mockCreateUserOnAccountTest)
-        .expect(201)
-        .then(res => {
-          userTokenTest = res.body.token;
-
-          delete res.body.token;
-          userTest = res.body;
-          accountTest = res.body.accounts[0]
-      }),
-      request(app.getHttpServer())
-        .post('/users/register')
-        .send(mockCreateUser2OnAccountTest)
-        .expect(201)
-        .then(res => {
-          thirdUserTokenTest = res.body.token;
-
-          delete res.body.token;
-          thirdUserTest = res.body;
-          accountTest2 = res.body.accounts[0]
-      }),
-      request(app.getHttpServer())
-        .post('/users/register')
-        .send(mockCreateUser3OnAccountTest)
-        .expect(201)
-        .then(res => {
-          fourthUserTokenTest = res.body.token;
-      })
-    ])
   });
 
   afterAll(async () => {
     await app.close();
   });
+
+  beforeEach(async()=>{
+    await request(app.getHttpServer())
+      .get('/seed')
+      .expect(200)
+      .then(res => {
+        seedUsers = res.body.users
+        seedAdmin = res.body.admin
+      })
+  })
 
   describe('create - /accounts (POST)', () => {
 
@@ -101,7 +54,7 @@ describe('Accounts (e2e)', () => {
     it('should return a BadRequest error when client not send a name', async () => {
       await request(app.getHttpServer())
         .post('/accounts')
-        .auth(userTokenTest,{type:'bearer'})
+        .auth(seedUsers[0].token,{type:'bearer'})
         .send({description: mockToCreateAccount.description})
         .expect(400)
     })
@@ -110,48 +63,42 @@ describe('Accounts (e2e)', () => {
       await request(app.getHttpServer())
         .post('/accounts')
         .send(mockToCreateAccount)
-        .auth(userTokenTest,{type:'bearer'})
+        .auth(seedUsers[0].token,{type:'bearer'})
         .expect(201)
         .then(res =>{
           expect(res.body).toMatchObject({
             ...mockToCreateAccount,
-            access_key: expect.any(String),
-            users: [{...userTest}],
-            creator_user: {...userTest},
-            admin_user: {...userTest},
+            access_key: expect.any(String)
           })
-          
-          accountTest3 = res.body;
-          userTest.accounts = [...userTest.accounts, res.body]
+          expect(res.body.users[0].id).toBe(seedUsers[0].id)
+          expect(res.body.admin_user.id).toBe(seedUsers[0].id)
+          expect(res.body.creator_user.id).toBe(seedUsers[0].id)
         })
         
     })
 
-    it('should create an account for second user with empty description', async () => {
+    it('should create an account with empty description', async () => {
       await request(app.getHttpServer())
         .post('/accounts')
         .send({name: mockToCreateAccount.name})
-        .auth(thirdUserTokenTest,{type:'bearer'})
+        .auth(seedUsers[0].token,{type:'bearer'})
         .expect(201)
         .then(res =>{
           expect(res.body).toMatchObject({
             name: mockToCreateAccount.name,
-            description: '',
-            access_key: expect.any(String),
-            users: [{...thirdUserTest}],
-            creator_user: {...thirdUserTest},
-            admin_user: {...thirdUserTest},
+            access_key: expect.any(String)
           })
-
-          thirdUserTest.accounts = [...thirdUserTest.accounts, res.body]
+          expect(res.body.users[0].id).toBe(seedUsers[0].id)
+          expect(res.body.admin_user.id).toBe(seedUsers[0].id)
+          expect(res.body.creator_user.id).toBe(seedUsers[0].id)
         })
     })
 
-    it('should return a Frobidden error when user no premium try to create a 3th account', async () => {
+    it('should return a Forbidden error when user no premium try to create a 3th account', async () => {
       await request(app.getHttpServer())
         .post('/accounts')
         .send(mockToCreateAccount)
-        .auth(userTokenTest,{type:'bearer'})
+        .auth(seedUsers[1].token,{type:'bearer'})
         .expect(403)
     })
 
@@ -159,27 +106,21 @@ describe('Accounts (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/users/premium')
-        .auth(userTokenTest,{type:'bearer'})
-        .then(res =>{
-          userTest = res.body
-        })
+        .auth(seedUsers[1].token,{type:'bearer'})
 
       await request(app.getHttpServer())
         .post('/accounts')
         .send(mockToCreateAccount)
-        .auth(userTokenTest,{type:'bearer'})
+        .auth(seedUsers[1].token,{type:'bearer'})
         .expect(201)
         .then(res =>{
           expect(res.body).toMatchObject({
-            ...mockToCreateAccount,
-            access_key: expect.any(String),
-            users: [{...userTest}],
-            creator_user: {...userTest},
-            admin_user: {...userTest},
+            name: mockToCreateAccount.name,
+            access_key: expect.any(String)
           })
-
-          userTest.accounts = [...userTest.accounts, res.body]
-          expect(userTest.accounts).toHaveLength(3)
+          expect(res.body.users[0].id).toBe(seedUsers[1].id)
+          expect(res.body.admin_user.id).toBe(seedUsers[1].id)
+          expect(res.body.creator_user.id).toBe(seedUsers[1].id)
         })
     })
 
@@ -190,7 +131,7 @@ describe('Accounts (e2e)', () => {
     it('should return all accounts', async()=>{
       await request(app.getHttpServer())
         .get('/accounts')
-        .auth(adminTokenTest,{type:'bearer'})
+        .auth(seedAdmin.token,{type:'bearer'})
         .expect(200)
         .then(res => {
           expect(res.body.accounts.length).toBe(res.body.totalAccounts)
@@ -203,14 +144,14 @@ describe('Accounts (e2e)', () => {
     it('should return a Forbidden error if is not an admin', async()=>{
       await request(app.getHttpServer())
         .get('/accounts')
-        .auth(userTokenTest,{type:'bearer'})
+        .auth(seedUsers[0].token,{type:'bearer'})
         .expect(403)
     })
 
     it('should return only 2 accounts, skiping 1', async()=>{
       await request(app.getHttpServer())
         .get('/accounts?limit=2&offset=1')
-        .auth(adminTokenTest,{type:'bearer'})
+        .auth(seedAdmin.token,{type:'bearer'})
         .expect(200)
         .then(res => {
           expect(res.body.accounts).toHaveLength(2)
@@ -223,13 +164,26 @@ describe('Accounts (e2e)', () => {
 
   describe('findOne - /accounts/{:id} (GET)', () => {
     
-    it('should return an account by id', async()=>{
+    it('should return an account by id when is admin', async()=>{
       await request(app.getHttpServer())
-        .get(`/accounts/${accountTest.id}`)
-        .auth(adminTokenTest,{type:'bearer'})
+        .get(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedAdmin.token,{type:'bearer'})
         .expect(200)
         .then(res => {
-          expect(res.body).toMatchObject({...accountTest})
+          expect(res.body).toMatchObject({...seedUsers[0].accounts[0]})
+          expect(res.body).toHaveProperty('users')
+          expect(res.body).toHaveProperty('creator_user')
+          expect(res.body).toHaveProperty('admin_user')
+      })
+    })
+
+    it('should return an account by id when user belong to the account', async()=>{
+      await request(app.getHttpServer())
+        .get(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .expect(200)
+        .then(res => {
+          expect(res.body).toMatchObject({...seedUsers[0].accounts[0]})
           expect(res.body).toHaveProperty('users')
           expect(res.body).toHaveProperty('creator_user')
           expect(res.body).toHaveProperty('admin_user')
@@ -238,24 +192,53 @@ describe('Accounts (e2e)', () => {
 
     it('should return a Forbidden error if user doesnt belong to the account and is not an admin', async()=>{
       await request(app.getHttpServer())
-        .get(`/accounts/${accountTest.id}`)
-        .auth(thirdUserTokenTest,{type:'bearer'})
+        .get(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[1].token,{type:'bearer'})
         .expect(403)
     })
 
     it('should return a NotFounded error if id doesnt exist', async()=>{
       await request(app.getHttpServer())
-        .get(`/accounts/${mockExampleUUID}`)
-        .auth(adminTokenTest,{type:'bearer'})
+        .get(`/accounts/${fakeAccountUUID}`)
+        .auth(seedAdmin.token,{type:'bearer'})
         .expect(404)
     })
 
     it('should return a BadRequest error if id is not a valid uuid', async()=>{
       await request(app.getHttpServer())
         .get(`/accounts/123456789`)
-        .auth(adminTokenTest,{type:'bearer'})
+        .auth(seedAdmin.token,{type:'bearer'})
         .expect(400)
     })
+
+    it('should return the account even if it is inative for the admin', async()=>{
+
+      // Elimina cuenta primero
+      await request(app.getHttpServer())
+        .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .expect(200)
+
+      // Valida que se pueda ver la cuenta eliminada si es un admin
+      await request(app.getHttpServer())
+        .get(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedAdmin.token,{type:'bearer'})
+        .expect(200)
+    })
+
+    it('should return the accounts only if "isActive" is true', async()=>{
+
+      // Elimina cuenta primero
+      await request(app.getHttpServer())
+        .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .expect(200)
+        
+      await request(app.getHttpServer())
+        .get(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .expect(404)
+    })  
 
   })
 
@@ -263,13 +246,13 @@ describe('Accounts (e2e)', () => {
 
     it('should return updated account when is updated for admin', async()=>{
       await request(app.getHttpServer())
-        .patch(`/accounts/${accountTest.id}`)
+        .patch(`/accounts/${seedUsers[0].accounts[0].id}`)
         .send(mockToUpdateAccount)
-        .auth(adminTokenTest,{type:'bearer'})
+        .auth(seedAdmin.token,{type:'bearer'})
         .expect(200)
         .then(res => {
           expect(res.body).toMatchObject({
-            ...accountTest,
+            ...seedUsers[0].accounts[0],
             ...mockToUpdateAccount
           })
         })
@@ -277,20 +260,23 @@ describe('Accounts (e2e)', () => {
 
     it('should return a Forbidden error when updated by a user other than account_admin', async()=>{
       await request(app.getHttpServer())
-        .patch(`/accounts/${accountTest.id}`)
+        .patch(`/accounts/${seedUsers[0].accounts[0].id}`)
         .send(mockToUpdateAccount)
-        .auth(thirdUserTokenTest,{type:'bearer'})
+        .auth(seedUsers[1].token,{type:'bearer'})
         .expect(403)
     })
 
     it('should return updated account when is updated for account_admin', async()=>{
       await request(app.getHttpServer())
-        .patch(`/accounts/${accountTest.id}`)
-        .send(mockToCreateAccount)
-        .auth(userTokenTest,{type:'bearer'})
+        .patch(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .send(mockToUpdateAccount)
+        .auth(seedUsers[0].token,{type:'bearer'})
         .expect(200)
         .then(res => {
-          expect(res.body).toMatchObject({...mockToCreateAccount})
+          expect(res.body).toMatchObject({
+            ...seedUsers[0].accounts[0],
+            ...mockToUpdateAccount
+          })
         })
     })
 
@@ -301,7 +287,7 @@ describe('Accounts (e2e)', () => {
     it('should return a NotFount error when the access_key is incorrect', async()=>{
       await request(app.getHttpServer())
         .post('/accounts/join')
-        .auth(userTokenTest,{type:'bearer'})
+        .auth(seedUsers[0].token,{type:'bearer'})
         .send({access_key: '12345678'})
         .expect(404)
     })
@@ -309,7 +295,7 @@ describe('Accounts (e2e)', () => {
     it('should return a BadRequest error and when the access_key have invalid format', async()=>{
       await request(app.getHttpServer())
         .post('/accounts/join')
-        .auth(userTokenTest,{type:'bearer'})
+        .auth(seedUsers[0].token,{type:'bearer'})
         .send({access_key: '123456789'})
         .expect(400)
     })
@@ -317,36 +303,43 @@ describe('Accounts (e2e)', () => {
     it('should return a BadRequest error when user already exist in the account try to rejoin', async()=>{
       await request(app.getHttpServer())
         .post('/accounts/join')
-        .auth(thirdUserTokenTest,{type:'bearer'})
-        .send({access_key: accountTest2.access_key})
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .send({access_key: seedUsers[0].accounts[0].access_key})
         .expect(400)
     })
 
     it('should return the account the user join', async()=>{
       await request(app.getHttpServer())
         .post('/accounts/join')
-        .auth(userTokenTest,{type:'bearer'})
-        .send({access_key: accountTest2.access_key})
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .send({access_key: seedUsers[1].accounts[0].access_key})
         .expect(200)
         .then( res => {
-          expect(res.body.users.at(-1).id).toBe(userTest.id)
+          expect(res.body.users.at(-1).id).toBe(seedUsers[0].id)
         })
     })
 
     it('should return a Forbidden error when user try to join and the account already has maximum number of users', async()=>{
       await request(app.getHttpServer())
           .post('/accounts/join')
-          .auth(fourthUserTokenTest,{type:'bearer'})
-          .send({access_key: accountTest3.access_key})
-          .expect(200)
-          .then((res)=>{
-            accountTest3 = res.body;
-          })
-      await request(app.getHttpServer())
-          .post('/accounts/join')
-          .auth(adminTokenTest,{type:'bearer'})
-          .send({access_key: accountTest3.access_key})
+          .auth(seedUsers[0].token,{type:'bearer'})
+          .send({access_key: seedUsers[1].accounts[1].access_key})
           .expect(403)
+    })
+
+    it('should return a Forbbiden error when the account to try access was deleted', async()=>{
+
+      // Elimina cuenta primero
+      await request(app.getHttpServer())
+        .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .expect(200)
+
+      await request(app.getHttpServer())
+        .post('/accounts/join')
+        .auth(seedUsers[1].token,{type:'bearer'})
+        .send({access_key: seedUsers[0].accounts[0].access_key})
+        .expect(404)
     })
 
   })
@@ -356,31 +349,39 @@ describe('Accounts (e2e)', () => {
     it('should return a BadRequest error when id is a invalid uuid', async()=>{
       await request(app.getHttpServer())
         .delete(`/accounts/leave/123456789`)
-        .auth(userTokenTest,{type:'bearer'})
+        .auth(seedUsers[0].token,{type:'bearer'})
         .expect(400)
     })
 
     it('should return a NotFound error when id is not exist', async()=>{
       await request(app.getHttpServer())
-        .delete(`/accounts/leave/${mockExampleUUID}`)
-        .auth(userTokenTest,{type:'bearer'})
+        .delete(`/accounts/leave/${fakeAccountUUID}`)
+        .auth(seedUsers[0].token,{type:'bearer'})
         .expect(404)
     })
 
     it('should return the updated account and change admin when the actual account_admin leaves', async()=>{
+      // Agrego usuario1 a la primera cuenta de usuario2
       await request(app.getHttpServer())
-        .delete(`/accounts/leave/${accountTest2.id}`)
-        .auth(thirdUserTokenTest,{type:'bearer'})
+        .post('/accounts/join')
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .send({access_key: seedUsers[1].accounts[0].access_key})
+
+      // Elimino usuario2 de su primera cuenta, quedando como admin el usuario1
+      await request(app.getHttpServer())
+        .delete(`/accounts/leave/${seedUsers[1].accounts[0].id}`)
+        .auth(seedUsers[1].token,{type:'bearer'})
         .expect(200)
         .then( res => {
-          expect(res.body.admin_user.id).not.toEqual(thirdUserTest.id)
+          expect(res.body.admin_user.id).not.toEqual(seedUsers[1].id)
+          expect(res.body.admin_user.id).toEqual(seedUsers[0].id)
         })
     })
 
     it('should delete account when last user leave', async()=>{
       await request(app.getHttpServer())
-        .delete(`/accounts/leave/${accountTest.id}`)
-        .auth(userTokenTest,{type:'bearer'})
+        .delete(`/accounts/leave/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[0].token,{type:'bearer'})
         .expect(200)
         .then( res => {
           expect(res.body.isActive).toBeFalsy()
@@ -394,9 +395,9 @@ describe('Accounts (e2e)', () => {
     it('should return a Forbidden error when a non-admin user try to pushout another user ',async()=>{
 
       await request(app.getHttpServer())
-          .patch(`/accounts/pushout/${accountTest3.id}`)
-          .auth(thirdUserTokenTest,{type:'bearer'})
-          .send({idUsers: [userTest.id]})
+          .patch(`/accounts/pushout/${seedUsers[0].accounts[0].id}`)
+          .auth(seedUsers[1].token,{type:'bearer'})
+          .send({idUsers: [seedUsers[0].id]})
           .expect(403)
     })
 
@@ -404,38 +405,45 @@ describe('Accounts (e2e)', () => {
 
       await request(app.getHttpServer())
           .patch(`/accounts/pushout/123456789`)
-          .auth(thirdUserTokenTest,{type:'bearer'})
-          .send({idUsers: [userTest.id]})
+          .auth(seedUsers[1].token,{type:'bearer'})
+          .send({idUsers: [seedUsers[0].id]})
           .expect(400)
     })
 
     it('should return a NotFound error when not exist account whith that id',async()=>{
 
       await request(app.getHttpServer())
-      .patch(`/accounts/pushout/${mockExampleUUID}`)
-          .auth(thirdUserTokenTest,{type:'bearer'})
-          .send({idUsers: [userTest.id]})
+      .patch(`/accounts/pushout/${fakeAccountUUID}`)
+          .auth(seedUsers[1].token,{type:'bearer'})
+          .send({idUsers: [seedUsers[0].id]})
           .expect(404)
     })
 
     it('should return a BadRequest error when userId is not a valid uuid',async()=>{
 
       await request(app.getHttpServer())
-      .patch(`/accounts/pushout/${accountTest3.id}`)
-          .auth(userTokenTest,{type:'bearer'})
+      .patch(`/accounts/pushout/${seedUsers[0].accounts[0].id}`)
+          .auth(seedUsers[0].token,{type:'bearer'})
           .send({idUsers: ['123456789']})
           .expect(400)
     })
 
     it('should return the account updated without users ejected',async()=>{
 
+      // Agrego usuario1 a la primera cuenta de usuario2
       await request(app.getHttpServer())
-          .patch(`/accounts/pushout/${accountTest3.id}`)
-          .auth(userTokenTest,{type:'bearer'})
-          .send({idUsers: [thirdUserTest.id]})
+        .post('/accounts/join')
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .send({access_key: seedUsers[1].accounts[0].access_key})
+
+      // Elimino usuario1 de primera cuenta de usuario2
+      await request(app.getHttpServer())
+          .patch(`/accounts/pushout/${seedUsers[1].accounts[0].id}`)
+          .auth(seedUsers[1].token,{type:'bearer'})
+          .send({idUsers: [seedUsers[0].id]})
           .expect(200)
           .then( res => {
-            expect(res.body.users[0]).not.toMatchObject({id:thirdUserTest.id})
+            expect(res.body.users).toHaveLength(1)
           })
     })
 
@@ -445,15 +453,15 @@ describe('Accounts (e2e)', () => {
     
     it('should return a Forbidden error when other user than account_admin try to delete account', async()=>{
       await request(app.getHttpServer())
-        .delete(`/accounts/${accountTest3.id}`)
-        .auth(thirdUserTokenTest,{type:'bearer'})
+        .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[1].token,{type:'bearer'})
         .expect(403)
     })
 
     it('should return an account deleted when do it account_admin', async()=>{
       await request(app.getHttpServer())
-        .delete(`/accounts/${accountTest3.id}`)
-        .auth(userTokenTest,{type:'bearer'})
+        .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedAdmin.token,{type:'bearer'})
         .expect(200)
         .then(res => {
           expect(res.body).toMatchObject({
@@ -464,43 +472,14 @@ describe('Accounts (e2e)', () => {
 
     it('should return an account deleted when do it the admin', async()=>{
       await request(app.getHttpServer())
-        .delete(`/accounts/${accountTest2.id}`)
-        .auth(adminTokenTest,{type:'bearer'})
+        .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
+        .auth(seedUsers[0].token,{type:'bearer'})
         .expect(200)
         .then(res => {
           expect(res.body).toMatchObject({
             isActive: false
           })
         })
-    })
-
-  })
-
-  describe('findOne - /accounts/{:id} (GET)', () => { 
-
-    it('should return the account even if it is inative for the admin', async()=>{
-      await request(app.getHttpServer())
-        .get(`/accounts/${accountTest2.id}`)
-        .auth(adminTokenTest,{type:'bearer'})
-        .expect(200)
-    })
-
-    it('should return the accounts only if "isActive" is true', async()=>{
-      await request(app.getHttpServer())
-        .get(`/accounts/${accountTest2.id}`)
-        .auth(userTokenTest,{type:'bearer'})
-        .expect(404)
-    })  
-  })
-
-  describe('join - /accounts/join (POST)', () => { 
-
-    it('should return a Forbbiden error when the account to try access was deleted', async()=>{
-      await request(app.getHttpServer())
-        .post('/accounts/join')
-        .auth(userTokenTest,{type:'bearer'})
-        .send({access_key: accountTest2.access_key})
-        .expect(404)
     })
 
   })

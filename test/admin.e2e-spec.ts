@@ -3,17 +3,10 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 
 import { AppModule } from '../src/app.module';
-import { mockAdminUser, mockAdminUser2, mockCompleteUser, mockCreateUser, mockCreateUser2, mockUserToUpdate } from '../src/users/mocks/userMocks';
-import { User } from '../src/users/entities/user.entity';
+import {mockToCreateAdmin} from '../src/users/mocks/userMocks';
 
-describe('Auth (e2e)', () => {
+describe('AdminController (e2e)', () => {
   let app: INestApplication;
-  let userTest: User;
-  let userTokenTest: string;
-  let thirdUserTest: User;
-  let thirdUserTokenTest: string;
-  let adminTest: User;
-  let adminTokenTest: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -30,35 +23,38 @@ describe('Auth (e2e)', () => {
     )
 
     await app.init();
-
-    // Clean users for testing
-    await request(app.getHttpServer())
-      .get('/users/test/clean')
   });
 
   afterAll(async () => {
     await app.close();
   });
 
+  beforeAll(async()=>{
+    await request(app.getHttpServer())
+      .get('/seed/clean')
+      .expect(200,{
+        message: 'DB cleaned'
+      })
+  })
+
   describe('createAdmin - /admin/register (POST)', () => {
 
     it('should create a new admin', async () => {
       await request(app.getHttpServer())
         .post('/admin/register')
-        .send(mockAdminUser)
+        .send(mockToCreateAdmin)
         .expect(201)
-        .then(res => {
-          adminTokenTest = res.body.token;
-
-          delete res.body.token;
-          adminTest = res.body;
-        })
     })
 
     it('should return a Forbidden error when an admin already exist', async () => {
+      // Limpia DB y genera seed
+      await request(app.getHttpServer())
+        .get('/seed')
+        .expect(200)
+
       await request(app.getHttpServer())
         .post('/admin/register')
-        .send(mockAdminUser2)
+        .send(mockToCreateAdmin)
         .expect(403)
         .then(res => {
           expect(res.body).toEqual({

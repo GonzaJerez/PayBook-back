@@ -10,4 +10,9 @@ export class SeedController {
     return this.seedService.executeSeed()
   }
 
+  @Get('clean')
+  cleanDB(){
+    return this.seedService.cleanDB()
+  }
+
 }

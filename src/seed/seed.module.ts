@@ -4,7 +4,7 @@ import { SeedService } from './seed.service';
 import { SeedController } from './seed.controller';
 import {AuthModule} from '../auth/auth.module';
 import {AccountsModule} from '../accounts/accounts.module';
-import {CheckDevEnv} from './middlewares/check-dev-env';
+import {CheckDevEnv} from './middlewares/check-dev-env.middleware';
 
 @Module({
   controllers: [SeedController],
