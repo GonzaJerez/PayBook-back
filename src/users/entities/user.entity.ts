@@ -66,30 +66,18 @@ export class User {
         account => account.users,
         {cascade:true}
     )
-    @JoinTable(/* {
-        name: 'users_accounts',
-        inverseJoinColumn: {
-            name: 'account_id',
-            referencedColumnName: 'id'
-        },
-        joinColumn:{
-            name: 'user_id',
-            referencedColumnName: 'id'
-        }
-    } */)
-    accounts?: Account[]
+    @JoinTable({name:'users_accounts'})
+    accounts: Account[]
 
     @OneToMany(
         ()=>Account,
         account => account.creator_user,
-        // {eager: true}
     )
     accounts_owner?: Account[]
 
     @OneToMany(
         ()=>Account,
         account => account.admin_user,
-        // {eager: true}
     )
     accounts_admin?: Account[]
 }

@@ -6,11 +6,27 @@ import {AppModule} from '../src/app.module';
 import {UserWithToken} from '../src/users/interfaces/UserWithToken.interface';
 import {fakeUUID, mockToCreateAdmin, mockToCreateUser, mockToCreateUser2, mockUser1ToLogin, mockUserToUpdate} from '../src/users/mocks/userMocks';
 import {fakeAccountUUID, mockToCreateAccount, mockToUpdateAccount} from '../src/accounts/mocks/accountMocks';
+import {ValidRoles} from '../src/auth/interfaces';
+import {mockToCreateCategory, mockToUpdateCategory} from '../src/categories/mocks/categoriesMock';
+import {category1, subcategory1} from '../src/seed/mocks/seedMock';
+import {defaultCategories} from '../src/categories/data/default-categories';
+import {Account} from '../src/accounts/entities/account.entity';
+import {Category} from '../src/categories/entities/category.entity';
+import {mockToCreateSubcategory, mockToUpdateSubcategory} from '../src/subcategories/mocks/subcategoriesMocks';
+import {Subcategory} from '../src/subcategories/entities/subcategory.entity';
 
 describe('App (e2e)', () => {
   let app: INestApplication;
   let seedUsers: UserWithToken[]
   let seedAdmin: UserWithToken
+  let BASE_URL=''
+  let COMPLEMENT_URL=''
+
+  let userTest1:UserWithToken;
+  let userTest2:UserWithToken;
+  let accountTest1:Account;
+  let categoryTest1:Category;
+  let subcategoryTest1:Subcategory
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -40,24 +56,34 @@ describe('App (e2e)', () => {
       .then(res => {
         seedUsers = res.body.users
         seedAdmin = res.body.admin
+
+        userTest1 = seedUsers[0]
+        userTest2 = seedUsers[1]
+        accountTest1 = userTest1.accounts[0]
+        categoryTest1 = accountTest1.categories[0]
+        subcategoryTest1 = categoryTest1.subcategories[0]
       })
   })
 
   describe('SeedController', () => {
+    beforeAll(()=>{
+      BASE_URL='/seed'
+    })
+
 
     describe('executeSeed - /seed (GET)', () => {
 
       it('should return a Forbidden error when try to execute seed on non development environment', async () => {
         process.env.STAGE = 'prod'
         await request(app.getHttpServer())
-          .get('/seed')
+          .get(BASE_URL)
           .expect(403)
         process.env.STAGE = 'dev'
       })
 
       it('should execute a seed', async () => {
         await request(app.getHttpServer())
-          .get('/seed')
+          .get(BASE_URL)
           .expect(200)
           .then(res => {
             expect(res.body.message).toBe('Seed executed')
@@ -84,18 +110,21 @@ describe('App (e2e)', () => {
     })
 
     describe('cleanDB - /seed/clean (GET)', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/clean'
+      })
 
       it('should return a Forbidden error when try to execute seed on non development environment', async () => {
         process.env.STAGE = 'prod'
         await request(app.getHttpServer())
-          .get('/seed/clean')
+          .get(`${BASE_URL}${COMPLEMENT_URL}`)
           .expect(403)
         process.env.STAGE = 'dev'
       })
 
       it('should clean DB', async () => {
         await request(app.getHttpServer())
-          .get('/seed/clean')
+          .get(`${BASE_URL}${COMPLEMENT_URL}`)
           .expect(200, {
             message: 'DB cleaned'
           })
@@ -106,18 +135,24 @@ describe('App (e2e)', () => {
   })
 
   describe('AuthController (e2e)', () => {
+    beforeAll(()=>{
+      BASE_URL='/auth'
+    })
 
     describe('login - /auth/login (POST)', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/login'
+      })
 
       it('should login user when credentials are corrects', async () => {
         await request(app.getHttpServer())
-          .post(`/auth/login`)
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send(mockUser1ToLogin)
           .expect(200)
           .then(res => {
             expect(res.body).toEqual({
-              id: seedUsers[0].id,
-              email: seedUsers[0].email,
+              id: userTest1.id,
+              email: userTest1.email,
               token: expect.any(String)
             })
           })
@@ -125,7 +160,7 @@ describe('App (e2e)', () => {
 
       it('should return an BadRequest error when password does not satisfy the requirements ', async () => {
         await request(app.getHttpServer())
-          .post(`/auth/login`)
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send({
             email: mockUser1ToLogin.email,
             password: 'ABC'
@@ -144,7 +179,7 @@ describe('App (e2e)', () => {
 
       it('should return an BadRequest error when email does not satisfy the requirements ', async () => {
         await request(app.getHttpServer())
-          .post(`/auth/login`)
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send({
             email: 'otroemailgmail.com',
             password: mockUser1ToLogin.password
@@ -163,7 +198,7 @@ describe('App (e2e)', () => {
 
       it('should return an Unauthorized error user when credentials (password) are incorrect', async () => {
         await request(app.getHttpServer())
-          .post(`/auth/login`)
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send({
             email: mockUser1ToLogin.email,
             password: 'Abc1234'
@@ -177,7 +212,7 @@ describe('App (e2e)', () => {
 
       it('should return an Unauthorized error user when credentials (email) are incorrect', async () => {
         await request(app.getHttpServer())
-          .post(`/auth/login`)
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send({
             email: 'otro-test@gmail.com',
             password: mockUser1ToLogin.password
@@ -194,36 +229,48 @@ describe('App (e2e)', () => {
   });
 
   describe('UsersController (e2e)', () => {
+    beforeAll(()=>{
+      BASE_URL='/users'
+    })
   
     describe('create - /users/register (POST)', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/register'
+      })
   
       it('should create a new user', async () => {
         await request(app.getHttpServer())
-          .post('/users/register')
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send(mockToCreateUser)
           .expect(201)
           .then(res => {
             expect(res.body.accounts).toHaveLength(1)
+            expect(res.body.accounts[0].categories).toHaveLength(defaultCategories.length)
+            expect(res.body.accounts[0].categories[0].subcategories).toHaveLength(defaultCategories[0].subcategories.length)
+            expect(res.body.accounts[0].categories[1].subcategories).toHaveLength(defaultCategories[1].subcategories.length)
           })
       });
   
       it('should create a third user with other email', async () => {
         await request(app.getHttpServer())
-          .post('/users/register')
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send(mockToCreateUser2)
           .expect(201)
           .then(res => {
             expect(res.body.accounts).toHaveLength(1)
+            expect(res.body.accounts[0].categories).toHaveLength(defaultCategories.length)
+            expect(res.body.accounts[0].categories[0].subcategories).toHaveLength(defaultCategories[0].subcategories.length)
+            expect(res.body.accounts[0].categories[1].subcategories).toHaveLength(defaultCategories[1].subcategories.length)
           })
       });
   
       it('should return error when email user already exist', async () => {
         await request(app.getHttpServer())
-          .post('/users/register')
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send(mockToCreateUser)
   
         await request(app.getHttpServer())
-          .post('/users/register')
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send(mockToCreateUser)
           .expect(400)
       });
@@ -234,7 +281,7 @@ describe('App (e2e)', () => {
       it('should return all users', async () => {
   
         await request(app.getHttpServer())
-          .get('/users')
+          .get(`${BASE_URL}`)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(200)
           .then(res => {
@@ -246,7 +293,7 @@ describe('App (e2e)', () => {
   
       it('should return an unauthorized error when req not contain token', async () => {
         await request(app.getHttpServer())
-          .get('/users')
+          .get(`${BASE_URL}`)
           .expect(401)
       })
     })
@@ -255,11 +302,11 @@ describe('App (e2e)', () => {
   
       it('should return a user by id when is same user', async () => {
         await request(app.getHttpServer())
-          .get(`/users/${seedUsers[0].id}`)
-          .auth(seedUsers[0].token, { type: 'bearer' })
+          .get(`${BASE_URL}/${userTest1.id}`)
+          .auth(userTest1.token, { type: 'bearer' })
           .expect(200)
           .then(res => {
-            expect(res.body).toMatchObject({id: seedUsers[0].id})
+            expect(res.body).toMatchObject({id: userTest1.id})
             expect(res.body).toHaveProperty('accounts')
             expect(res.body).toHaveProperty('accounts_owner')
             expect(res.body).toHaveProperty('accounts_admin')
@@ -268,11 +315,11 @@ describe('App (e2e)', () => {
   
       it('should return a user by id when is admin', async () => {
         await request(app.getHttpServer())
-          .get(`/users/${seedUsers[0].id}`)
+          .get(`${BASE_URL}/${userTest1.id}`)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(200)
           .then(res => {
-            expect(res.body).toMatchObject({id: seedUsers[0].id})
+            expect(res.body).toMatchObject({id: userTest1.id})
             expect(res.body).toHaveProperty('accounts')
             expect(res.body).toHaveProperty('accounts_owner')
             expect(res.body).toHaveProperty('accounts_admin')
@@ -281,14 +328,14 @@ describe('App (e2e)', () => {
   
       it('should return a Forbidden error when is other user', async () => {
         await request(app.getHttpServer())
-          .get(`/users/${seedUsers[0].id}`)
-          .auth(seedUsers[1].token, { type: 'bearer' })
+          .get(`${BASE_URL}/${userTest1.id}`)
+          .auth(userTest2.token, { type: 'bearer' })
           .expect(403)
       })
   
       it('should return an unauthorized error when not exist token', async () => {
         await request(app.getHttpServer())
-          .get(`/users/${seedUsers[0].id}`)
+          .get(`${BASE_URL}/${userTest1.id}`)
           .expect(401, {
             statusCode: 401,
             message: 'Unauthorized'
@@ -297,7 +344,7 @@ describe('App (e2e)', () => {
   
       it('should return an unauthorized error when token is not valid', async () => {
         await request(app.getHttpServer())
-          .get(`/users/${seedUsers[0].id}`)
+          .get(`${BASE_URL}/${userTest1.id}`)
           .auth('123456789', { type: 'bearer' })
           .expect(401, {
             statusCode: 401,
@@ -307,7 +354,7 @@ describe('App (e2e)', () => {
   
       it('should return a BadRequest error when id isnt a valid uuid', async () => {
         await request(app.getHttpServer())
-          .get(`/users/123456789`)
+          .get(`${BASE_URL}/123456789`)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(400, {
             statusCode: 400,
@@ -318,7 +365,7 @@ describe('App (e2e)', () => {
   
       it('should return a BadRequest error when id doesnt exist', async () => {
         await request(app.getHttpServer())
-          .get(`/users/${fakeUUID}`)
+          .get(`${BASE_URL}/${fakeUUID}`)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(404)
       })
@@ -328,9 +375,9 @@ describe('App (e2e)', () => {
   
       it('should return an updated user when updated by himself', async () => {
         await request(app.getHttpServer())
-          .patch(`/users/${seedUsers[0].id}`)
+          .patch(`${BASE_URL}/${userTest1.id}`)
           .send(mockUserToUpdate)
-          .auth(seedUsers[0].token, { type: 'bearer' })
+          .auth(userTest1.token, { type: 'bearer' })
           .expect(200)
           .then( res => {
             expect(res.body).toMatchObject({...mockUserToUpdate})
@@ -339,9 +386,9 @@ describe('App (e2e)', () => {
   
       it('should return an updated user when updated by an admin', async () => {
         await request(app.getHttpServer())
-          .patch(`/users/${seedUsers[0].id}`)
+          .patch(`${BASE_URL}/${userTest1.id}`)
           .send(mockUserToUpdate)
-          .auth(seedUsers[0].token, { type: 'bearer' })
+          .auth(userTest1.token, { type: 'bearer' })
           .expect(200)
           .then( res => {
             expect(res.body).toMatchObject({...mockUserToUpdate})
@@ -350,9 +397,9 @@ describe('App (e2e)', () => {
   
       it('should return a Forbidden error when some user want to update other user', async () => {
         await request(app.getHttpServer())
-          .patch(`/users/${seedUsers[0].id}`)
+          .patch(`${BASE_URL}/${userTest1.id}`)
           .send(mockUserToUpdate)
-          .auth(seedUsers[1].token, { type: 'bearer' })
+          .auth(userTest2.token, { type: 'bearer' })
           .expect(403, {
             statusCode: 403,
             message: "You don't have permission to perform this action",
@@ -362,7 +409,7 @@ describe('App (e2e)', () => {
   
       it('should return an unauthorized error when not exist token', async () => {
         await request(app.getHttpServer())
-          .patch(`/users/${seedUsers[0].id}`)
+          .patch(`${BASE_URL}/${userTest1.id}`)
           .send(mockUserToUpdate)
           .expect(401, {
             statusCode: 401,
@@ -372,7 +419,7 @@ describe('App (e2e)', () => {
   
       it('should return an unauthorized error when token is not valid', async () => {
         await request(app.getHttpServer())
-          .patch(`/users/${seedUsers[0].id}`)
+          .patch(`${BASE_URL}/${userTest1.id}`)
           .send(mockUserToUpdate)
           .auth('123456789', { type: 'bearer' })
           .expect(401, {
@@ -383,7 +430,7 @@ describe('App (e2e)', () => {
   
       it('should return a BadRequest error when id isnt a valid uuid', async () => {
         await request(app.getHttpServer())
-          .patch(`/users/123456789`)
+          .patch(`${BASE_URL}/123456789`)
           .send(mockUserToUpdate)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(400, {
@@ -395,7 +442,7 @@ describe('App (e2e)', () => {
   
       it('should return a BadRequest error when id doesnt exist', async () => {
         await request(app.getHttpServer())
-          .patch(`/users/${fakeUUID}`)
+          .patch(`${BASE_URL}/${fakeUUID}`)
           .send(mockUserToUpdate)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(404)
@@ -413,8 +460,8 @@ describe('App (e2e)', () => {
   
       it('should return a Forbidden error when some user want to remove other user', async () => {
         await request(app.getHttpServer())
-          .delete(`/users/${seedUsers[0].id}`)
-          .auth(seedUsers[1].token, { type: 'bearer' })
+          .delete(`${BASE_URL}/${userTest1.id}`)
+          .auth(userTest2.token, { type: 'bearer' })
           .expect(403, {
             statusCode: 403,
             message: "You don't have permission to perform this action",
@@ -424,7 +471,7 @@ describe('App (e2e)', () => {
   
       it('should return an unauthorized error when not exist token', async () => {
         await request(app.getHttpServer())
-          .delete(`/users/${seedUsers[0].id}`)
+          .delete(`${BASE_URL}/${userTest1.id}`)
           .expect(401, {
             statusCode: 401,
             message: 'Unauthorized'
@@ -433,7 +480,7 @@ describe('App (e2e)', () => {
   
       it('should return an unauthorized error when token is not valid', async () => {
         await request(app.getHttpServer())
-          .delete(`/users/${seedUsers[0].id}`)
+          .delete(`${BASE_URL}/${userTest1.id}`)
           .auth('123456789', { type: 'bearer' })
           .expect(401, {
             statusCode: 401,
@@ -443,7 +490,7 @@ describe('App (e2e)', () => {
   
       it('should return a BadRequest error when id isnt a valid uuid', async () => {
         await request(app.getHttpServer())
-          .delete(`/users/123456789`)
+          .delete(`${BASE_URL}/123456789`)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(400, {
             statusCode: 400,
@@ -454,7 +501,7 @@ describe('App (e2e)', () => {
   
       it('should return a BadRequest error when id doesnt exist', async () => {
         await request(app.getHttpServer())
-          .delete(`/users/${fakeUUID}`)
+          .delete(`${BASE_URL}/${fakeUUID}`)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(404)
           .then(res => {
@@ -468,8 +515,8 @@ describe('App (e2e)', () => {
   
       it('should change prop "isActive" to false when user closes his account', async () => {
         await request(app.getHttpServer())
-          .delete(`/users/${seedUsers[0].id}`)
-          .auth(seedUsers[0].token, { type: 'bearer' })
+          .delete(`${BASE_URL}/${userTest1.id}`)
+          .auth(userTest1.token, { type: 'bearer' })
           .expect(200)
           .then(res=>{
             expect(res.body.isActive).toBeFalsy()
@@ -478,7 +525,7 @@ describe('App (e2e)', () => {
   
       it('should change prop "isActive" of user to false when an admin closes his account', async () => {
           await request(app.getHttpServer())
-            .delete(`/users/${seedUsers[0].id}`)
+            .delete(`${BASE_URL}/${userTest1.id}`)
             .auth(seedAdmin.token, { type: 'bearer' })
             .expect(200)
             .then(res=>{
@@ -488,17 +535,20 @@ describe('App (e2e)', () => {
     })
   
     describe('reactivate - /users/reactivate/:id (PATCH)', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/reactivate'
+      })
   
       it('should return a Forbidden error when user try to reactivate by himself', async () => {
   
         // Delete account
         await request(app.getHttpServer())
-            .delete(`/users/${seedUsers[0].id}`)
+            .delete(`${BASE_URL}/${userTest1.id}`)
             .auth(seedAdmin.token, { type: 'bearer' })
   
         await request(app.getHttpServer())
-          .patch(`/users/reactivate/${seedUsers[0].id}`)
-          .auth(seedUsers[0].token, { type: 'bearer' })
+          .patch(`${BASE_URL}${COMPLEMENT_URL}/${userTest1.id}`)
+          .auth(userTest1.token, { type: 'bearer' })
           .expect(403, {
             statusCode: 403,
             message: 'User deleted. Contact the admin',
@@ -508,7 +558,7 @@ describe('App (e2e)', () => {
   
       it('should reactivate user account when an admin do it', async () => {
         await request(app.getHttpServer())
-          .patch(`/users/reactivate/${seedUsers[0].id}`)
+          .patch(`${BASE_URL}${COMPLEMENT_URL}/${userTest1.id}`)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(200)
           .then(res =>{
@@ -516,12 +566,35 @@ describe('App (e2e)', () => {
           })
       })
     })
+
+    describe('becomePremium - /users/premium', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/premium'
+      })
+
+      it('should return a user with roles = premium',async()=>{
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(200)
+          .then(res => {
+            expect(res.body.roles).toEqual([ValidRoles.USER_PREMIUM])
+          })
+      })
+      
+    })
   
   });
 
   describe('AdminController (e2e)', () => {
+    beforeAll(()=>{
+      BASE_URL='/admin'
+    })
   
     describe('createAdmin - /admin/register (POST)', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/register'
+      })
   
       it('should create a new admin', async () => {
 
@@ -531,7 +604,7 @@ describe('App (e2e)', () => {
           .expect(200)
 
         await request(app.getHttpServer())
-          .post('/admin/register')
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send(mockToCreateAdmin)
           .expect(201)
       })
@@ -543,7 +616,7 @@ describe('App (e2e)', () => {
           .expect(200)
   
         await request(app.getHttpServer())
-          .post('/admin/register')
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
           .send(mockToCreateAdmin)
           .expect(403)
           .then(res => {
@@ -559,64 +632,70 @@ describe('App (e2e)', () => {
   });
   
   describe('AccountsController (e2e)', () => {
+    beforeAll(()=>{
+      BASE_URL='/accounts'
+    })
 
     describe('create - /accounts (POST)', () => {
   
       it('should return a Unauthorized error when user not authenticated', async () => {
         await request(app.getHttpServer())
-          .post('/accounts')
+          .post(`${BASE_URL}`)
           .send(mockToCreateAccount)
           .expect(401)
       })
   
       it('should return a BadRequest error when client not send a name', async () => {
         await request(app.getHttpServer())
-          .post('/accounts')
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .post(`${BASE_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
           .send({description: mockToCreateAccount.description})
           .expect(400)
       })
   
       it('should create an account', async () => {
         await request(app.getHttpServer())
-          .post('/accounts')
+          .post(`${BASE_URL}`)
           .send(mockToCreateAccount)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .auth(userTest1.token,{type:'bearer'})
           .expect(201)
           .then(res =>{
             expect(res.body).toMatchObject({
               ...mockToCreateAccount,
               access_key: expect.any(String)
             })
-            expect(res.body.users[0].id).toBe(seedUsers[0].id)
-            expect(res.body.admin_user.id).toBe(seedUsers[0].id)
-            expect(res.body.creator_user.id).toBe(seedUsers[0].id)
+            expect(res.body.users[0].id).toBe(userTest1.id)
+            expect(res.body.admin_user.id).toBe(userTest1.id)
+            expect(res.body.creator_user.id).toBe(userTest1.id)
+            expect(res.body.categories).toHaveLength(defaultCategories.length)
+            expect(res.body.categories[0].subcategories).toHaveLength(defaultCategories[0].subcategories.length)
+            expect(res.body.categories[1].subcategories).toHaveLength(defaultCategories[1].subcategories.length)
           })
           
       })
   
       it('should create an account with empty description', async () => {
         await request(app.getHttpServer())
-          .post('/accounts')
+          .post(`${BASE_URL}`)
           .send({name: mockToCreateAccount.name})
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .auth(userTest1.token,{type:'bearer'})
           .expect(201)
           .then(res =>{
             expect(res.body).toMatchObject({
               name: mockToCreateAccount.name,
               access_key: expect.any(String)
             })
-            expect(res.body.users[0].id).toBe(seedUsers[0].id)
-            expect(res.body.admin_user.id).toBe(seedUsers[0].id)
-            expect(res.body.creator_user.id).toBe(seedUsers[0].id)
+            expect(res.body.users[0].id).toBe(userTest1.id)
+            expect(res.body.admin_user.id).toBe(userTest1.id)
+            expect(res.body.creator_user.id).toBe(userTest1.id)
           })
       })
   
       it('should return a Forbidden error when user no premium try to create a 3th account', async () => {
         await request(app.getHttpServer())
-          .post('/accounts')
+          .post(`${BASE_URL}`)
           .send(mockToCreateAccount)
-          .auth(seedUsers[1].token,{type:'bearer'})
+          .auth(userTest2.token,{type:'bearer'})
           .expect(403)
       })
   
@@ -624,21 +703,21 @@ describe('App (e2e)', () => {
   
         await request(app.getHttpServer())
           .post('/users/premium')
-          .auth(seedUsers[1].token,{type:'bearer'})
+          .auth(userTest2.token,{type:'bearer'})
   
         await request(app.getHttpServer())
-          .post('/accounts')
+          .post(`${BASE_URL}`)
           .send(mockToCreateAccount)
-          .auth(seedUsers[1].token,{type:'bearer'})
+          .auth(userTest2.token,{type:'bearer'})
           .expect(201)
           .then(res =>{
             expect(res.body).toMatchObject({
               name: mockToCreateAccount.name,
               access_key: expect.any(String)
             })
-            expect(res.body.users[0].id).toBe(seedUsers[1].id)
-            expect(res.body.admin_user.id).toBe(seedUsers[1].id)
-            expect(res.body.creator_user.id).toBe(seedUsers[1].id)
+            expect(res.body.users[0].id).toBe(userTest2.id)
+            expect(res.body.admin_user.id).toBe(userTest2.id)
+            expect(res.body.creator_user.id).toBe(userTest2.id)
           })
       })
   
@@ -648,7 +727,7 @@ describe('App (e2e)', () => {
   
       it('should return all accounts', async()=>{
         await request(app.getHttpServer())
-          .get('/accounts')
+          .get(`${BASE_URL}`)
           .auth(seedAdmin.token,{type:'bearer'})
           .expect(200)
           .then(res => {
@@ -661,14 +740,14 @@ describe('App (e2e)', () => {
   
       it('should return a Forbidden error if is not an admin', async()=>{
         await request(app.getHttpServer())
-          .get('/accounts')
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .get(`${BASE_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(403)
       })
   
       it('should return only 2 accounts, skiping 1', async()=>{
         await request(app.getHttpServer())
-          .get('/accounts?limit=2&offset=1')
+          .get(`${BASE_URL}?limit=2&offset=1`)
           .auth(seedAdmin.token,{type:'bearer'})
           .expect(200)
           .then(res => {
@@ -684,11 +763,11 @@ describe('App (e2e)', () => {
       
       it('should return an account by id when is admin', async()=>{
         await request(app.getHttpServer())
-          .get(`/accounts/${seedUsers[0].accounts[0].id}`)
+          .get(`${BASE_URL}/${accountTest1.id}`)
           .auth(seedAdmin.token,{type:'bearer'})
           .expect(200)
           .then(res => {
-            expect(res.body).toMatchObject({...seedUsers[0].accounts[0]})
+            expect(res.body.id).toBe(accountTest1.id)
             expect(res.body).toHaveProperty('users')
             expect(res.body).toHaveProperty('creator_user')
             expect(res.body).toHaveProperty('admin_user')
@@ -697,11 +776,11 @@ describe('App (e2e)', () => {
   
       it('should return an account by id when user belong to the account', async()=>{
         await request(app.getHttpServer())
-          .get(`/accounts/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .get(`${BASE_URL}/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(200)
           .then(res => {
-            expect(res.body).toMatchObject({...seedUsers[0].accounts[0]})
+            expect(res.body.id).toBe(accountTest1.id)
             expect(res.body).toHaveProperty('users')
             expect(res.body).toHaveProperty('creator_user')
             expect(res.body).toHaveProperty('admin_user')
@@ -710,53 +789,54 @@ describe('App (e2e)', () => {
   
       it('should return a Forbidden error if user doesnt belong to the account and is not an admin', async()=>{
         await request(app.getHttpServer())
-          .get(`/accounts/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[1].token,{type:'bearer'})
+          .get(`${BASE_URL}/${accountTest1.id}`)
+          .auth(userTest2.token,{type:'bearer'})
           .expect(403)
       })
   
       it('should return a NotFounded error if id doesnt exist', async()=>{
         await request(app.getHttpServer())
-          .get(`/accounts/${fakeAccountUUID}`)
+          .get(`${BASE_URL}/${fakeAccountUUID}`)
           .auth(seedAdmin.token,{type:'bearer'})
           .expect(404)
       })
   
       it('should return a BadRequest error if id is not a valid uuid', async()=>{
         await request(app.getHttpServer())
-          .get(`/accounts/123456789`)
+          .get(`${BASE_URL}/123456789`)
           .auth(seedAdmin.token,{type:'bearer'})
           .expect(400)
       })
   
-      it('should return the account even if it is inative for the admin', async()=>{
+      it('should return the account even if it is inactive for the admin', async()=>{
   
         // Elimina cuenta primero
         await request(app.getHttpServer())
-          .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .delete(`${BASE_URL}/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(200)
   
         // Valida que se pueda ver la cuenta eliminada si es un admin
         await request(app.getHttpServer())
-          .get(`/accounts/${seedUsers[0].accounts[0].id}`)
+          .get(`${BASE_URL}/${accountTest1.id}`)
           .auth(seedAdmin.token,{type:'bearer'})
           .expect(200)
       })
   
-      it('should return the accounts only if "isActive" is true', async()=>{
+      it('should return Forbidden error when try to access an account which has already been deleted', async()=>{
   
         // Elimina cuenta primero
         await request(app.getHttpServer())
-          .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .delete(`${BASE_URL}/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(200)
-          
+        
+        // Al eliminar la cuenta se desvincula del usuario, por lo tanto ya no se puede acceder
         await request(app.getHttpServer())
-          .get(`/accounts/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[0].token,{type:'bearer'})
-          .expect(404)
-      })  
+          .get(`${BASE_URL}/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(403)
+      })
   
     })
   
@@ -764,13 +844,13 @@ describe('App (e2e)', () => {
   
       it('should return updated account when is updated for admin', async()=>{
         await request(app.getHttpServer())
-          .patch(`/accounts/${seedUsers[0].accounts[0].id}`)
+          .patch(`${BASE_URL}/${accountTest1.id}`)
           .send(mockToUpdateAccount)
           .auth(seedAdmin.token,{type:'bearer'})
           .expect(200)
           .then(res => {
             expect(res.body).toMatchObject({
-              ...seedUsers[0].accounts[0],
+              ...accountTest1,
               ...mockToUpdateAccount
             })
           })
@@ -778,21 +858,21 @@ describe('App (e2e)', () => {
   
       it('should return a Forbidden error when updated by a user other than account_admin', async()=>{
         await request(app.getHttpServer())
-          .patch(`/accounts/${seedUsers[0].accounts[0].id}`)
+          .patch(`${BASE_URL}/${accountTest1.id}`)
           .send(mockToUpdateAccount)
-          .auth(seedUsers[1].token,{type:'bearer'})
+          .auth(userTest2.token,{type:'bearer'})
           .expect(403)
       })
   
       it('should return updated account when is updated for account_admin', async()=>{
         await request(app.getHttpServer())
-          .patch(`/accounts/${seedUsers[0].accounts[0].id}`)
+          .patch(`${BASE_URL}/${accountTest1.id}`)
           .send(mockToUpdateAccount)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .auth(userTest1.token,{type:'bearer'})
           .expect(200)
           .then(res => {
             expect(res.body).toMatchObject({
-              ...seedUsers[0].accounts[0],
+              ...accountTest1,
               ...mockToUpdateAccount
             })
           })
@@ -800,48 +880,51 @@ describe('App (e2e)', () => {
   
     })
   
-    describe('join - /accounts/join (POST)', () => { 
+    describe('join - /accounts/join (POST)', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/join'
+      })
   
       it('should return a NotFount error when the access_key is incorrect', async()=>{
         await request(app.getHttpServer())
-          .post('/accounts/join')
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
           .send({access_key: '12345678'})
           .expect(404)
       })
   
       it('should return a BadRequest error and when the access_key have invalid format', async()=>{
         await request(app.getHttpServer())
-          .post('/accounts/join')
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
           .send({access_key: '123456789'})
           .expect(400)
       })
   
       it('should return a BadRequest error when user already exist in the account try to rejoin', async()=>{
         await request(app.getHttpServer())
-          .post('/accounts/join')
-          .auth(seedUsers[0].token,{type:'bearer'})
-          .send({access_key: seedUsers[0].accounts[0].access_key})
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send({access_key: accountTest1.access_key})
           .expect(400)
       })
   
       it('should return the account the user join', async()=>{
         await request(app.getHttpServer())
-          .post('/accounts/join')
-          .auth(seedUsers[0].token,{type:'bearer'})
-          .send({access_key: seedUsers[1].accounts[0].access_key})
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send({access_key: userTest2.accounts[0].access_key})
           .expect(200)
           .then( res => {
-            expect(res.body.users.at(-1).id).toBe(seedUsers[0].id)
+            expect(res.body.users.at(-1).id).toBe(userTest1.id)
           })
       })
   
       it('should return a Forbidden error when user try to join and the account already has maximum number of users', async()=>{
         await request(app.getHttpServer())
-            .post('/accounts/join')
-            .auth(seedUsers[0].token,{type:'bearer'})
-            .send({access_key: seedUsers[1].accounts[1].access_key})
+            .post(`${BASE_URL}${COMPLEMENT_URL}`)
+            .auth(userTest1.token,{type:'bearer'})
+            .send({access_key: userTest2.accounts[1].access_key})
             .expect(403)
       })
   
@@ -849,32 +932,35 @@ describe('App (e2e)', () => {
   
         // Elimina cuenta primero
         await request(app.getHttpServer())
-          .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(200)
   
         await request(app.getHttpServer())
-          .post('/accounts/join')
-          .auth(seedUsers[1].token,{type:'bearer'})
-          .send({access_key: seedUsers[0].accounts[0].access_key})
+          .post(`${BASE_URL}${COMPLEMENT_URL}`)
+          .auth(userTest2.token,{type:'bearer'})
+          .send({access_key: accountTest1.access_key})
           .expect(404)
       })
   
     })
   
     describe('leave - /accounts/leave/{:id} (DELETE)', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/leave'
+      })
       
       it('should return a BadRequest error when id is a invalid uuid', async()=>{
         await request(app.getHttpServer())
-          .delete(`/accounts/leave/123456789`)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .delete(`${BASE_URL}${COMPLEMENT_URL}/123456789`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(400)
       })
   
       it('should return a NotFound error when id is not exist', async()=>{
         await request(app.getHttpServer())
-          .delete(`/accounts/leave/${fakeAccountUUID}`)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .delete(`${BASE_URL}${COMPLEMENT_URL}/${fakeAccountUUID}`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(404)
       })
   
@@ -882,24 +968,24 @@ describe('App (e2e)', () => {
         // Agrego usuario1 a la primera cuenta de usuario2
         await request(app.getHttpServer())
           .post('/accounts/join')
-          .auth(seedUsers[0].token,{type:'bearer'})
-          .send({access_key: seedUsers[1].accounts[0].access_key})
+          .auth(userTest1.token,{type:'bearer'})
+          .send({access_key: userTest2.accounts[0].access_key})
   
         // Elimino usuario2 de su primera cuenta, quedando como admin el usuario1
         await request(app.getHttpServer())
-          .delete(`/accounts/leave/${seedUsers[1].accounts[0].id}`)
-          .auth(seedUsers[1].token,{type:'bearer'})
+          .delete(`${BASE_URL}${COMPLEMENT_URL}/${userTest2.accounts[0].id}`)
+          .auth(userTest2.token,{type:'bearer'})
           .expect(200)
           .then( res => {
-            expect(res.body.admin_user.id).not.toEqual(seedUsers[1].id)
-            expect(res.body.admin_user.id).toEqual(seedUsers[0].id)
+            expect(res.body.admin_user.id).not.toEqual(userTest2.id)
+            expect(res.body.admin_user.id).toEqual(userTest1.id)
           })
       })
   
       it('should delete account when last user leave', async()=>{
         await request(app.getHttpServer())
-          .delete(`/accounts/leave/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .delete(`${BASE_URL}${COMPLEMENT_URL}/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(200)
           .then( res => {
             expect(res.body.isActive).toBeFalsy()
@@ -909,39 +995,42 @@ describe('App (e2e)', () => {
     })
   
     describe('pushOut - /accounts/pushout/{:id} (PATCH)', () => {
+      beforeAll(()=>{
+        COMPLEMENT_URL='/pushout'
+      })
   
       it('should return a Forbidden error when a non-admin user try to pushout another user ',async()=>{
   
         await request(app.getHttpServer())
-            .patch(`/accounts/pushout/${seedUsers[0].accounts[0].id}`)
-            .auth(seedUsers[1].token,{type:'bearer'})
-            .send({idUsers: [seedUsers[0].id]})
+            .patch(`${BASE_URL}${COMPLEMENT_URL}/${accountTest1.id}`)
+            .auth(userTest2.token,{type:'bearer'})
+            .send({idUsers: [userTest1.id]})
             .expect(403)
       })
   
       it('should return a BadRequest error when id is not a valid uuid',async()=>{
   
         await request(app.getHttpServer())
-            .patch(`/accounts/pushout/123456789`)
-            .auth(seedUsers[1].token,{type:'bearer'})
-            .send({idUsers: [seedUsers[0].id]})
+            .patch(`${BASE_URL}${COMPLEMENT_URL}/123456789`)
+            .auth(userTest2.token,{type:'bearer'})
+            .send({idUsers: [userTest1.id]})
             .expect(400)
       })
   
       it('should return a NotFound error when not exist account whith that id',async()=>{
   
         await request(app.getHttpServer())
-        .patch(`/accounts/pushout/${fakeAccountUUID}`)
-            .auth(seedUsers[1].token,{type:'bearer'})
-            .send({idUsers: [seedUsers[0].id]})
+        .patch(`${BASE_URL}${COMPLEMENT_URL}/${fakeAccountUUID}`)
+            .auth(userTest2.token,{type:'bearer'})
+            .send({idUsers: [userTest1.id]})
             .expect(404)
       })
   
       it('should return a BadRequest error when userId is not a valid uuid',async()=>{
   
         await request(app.getHttpServer())
-        .patch(`/accounts/pushout/${seedUsers[0].accounts[0].id}`)
-            .auth(seedUsers[0].token,{type:'bearer'})
+        .patch(`${BASE_URL}${COMPLEMENT_URL}/${accountTest1.id}`)
+            .auth(userTest1.token,{type:'bearer'})
             .send({idUsers: ['123456789']})
             .expect(400)
       })
@@ -951,14 +1040,14 @@ describe('App (e2e)', () => {
         // Agrego usuario1 a la primera cuenta de usuario2
         await request(app.getHttpServer())
           .post('/accounts/join')
-          .auth(seedUsers[0].token,{type:'bearer'})
-          .send({access_key: seedUsers[1].accounts[0].access_key})
+          .auth(userTest1.token,{type:'bearer'})
+          .send({access_key: userTest2.accounts[0].access_key})
   
         // Elimino usuario1 de primera cuenta de usuario2
         await request(app.getHttpServer())
-            .patch(`/accounts/pushout/${seedUsers[1].accounts[0].id}`)
-            .auth(seedUsers[1].token,{type:'bearer'})
-            .send({idUsers: [seedUsers[0].id]})
+            .patch(`${BASE_URL}${COMPLEMENT_URL}/${userTest2.accounts[0].id}`)
+            .auth(userTest2.token,{type:'bearer'})
+            .send({idUsers: [userTest1.id]})
             .expect(200)
             .then( res => {
               expect(res.body.users).toHaveLength(1)
@@ -971,14 +1060,14 @@ describe('App (e2e)', () => {
       
       it('should return a Forbidden error when other user than account_admin try to delete account', async()=>{
         await request(app.getHttpServer())
-          .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[1].token,{type:'bearer'})
+          .delete(`${BASE_URL}/${accountTest1.id}`)
+          .auth(userTest2.token,{type:'bearer'})
           .expect(403)
       })
   
       it('should return an account deleted when do it account_admin', async()=>{
         await request(app.getHttpServer())
-          .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
+          .delete(`${BASE_URL}/${accountTest1.id}`)
           .auth(seedAdmin.token,{type:'bearer'})
           .expect(200)
           .then(res => {
@@ -990,12 +1079,13 @@ describe('App (e2e)', () => {
   
       it('should return an account deleted when do it the admin', async()=>{
         await request(app.getHttpServer())
-          .delete(`/accounts/${seedUsers[0].accounts[0].id}`)
-          .auth(seedUsers[0].token,{type:'bearer'})
+          .delete(`${BASE_URL}/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
           .expect(200)
           .then(res => {
             expect(res.body).toMatchObject({
-              isActive: false
+              isActive: false,
+              users: []
             })
           })
       })
@@ -1003,6 +1093,802 @@ describe('App (e2e)', () => {
     })
   
   });
-  
+
+  describe('CategoriesController (e2e', () => {
+    beforeAll(()=>{
+      BASE_URL=`/accounts`
+    })
+
+    describe('create - /accounts/{:idAccount}/categories (POST)', () => {
+
+      it('should return a NotFound error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/${accountTest1.id}/categories`)
+          .auth(userTest2.token,{type:'bearer'})
+          .send(mockToCreateCategory)
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/${accountTest1.id}/categories`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToCreateCategory)
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when already exist category on account with same name',async()=>{
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/${accountTest1.id}/categories`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(category1)
+          .expect(400)
+      })
+
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories`)
+        .send(category1)
+        .expect(401)
+      })
+
+      it('should return a BadRequest error when name is not specified',async()=>{
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories`)
+        .auth(userTest1.token,{type:'bearer'})
+        .send({})
+        .expect(400)
+      })
+
+      it('should return category created',async()=>{
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories`)
+        .auth(userTest1.token,{type:'bearer'})
+        .send(mockToCreateCategory)
+        .expect(201)
+        .then(res =>{
+          expect(res.body).toMatchObject(mockToCreateCategory)
+          expect(res.body.account.id).toStrictEqual(accountTest1.id)
+          expect(res.body.isActive).toBeTruthy()
+          expect(typeof res.body.id).toBe('string')
+        })
+      })
+
+      it('should return category reactivated when user creates category with same name another category deleted on same account',async()=>{
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories`)
+        .auth(userTest1.token,{type:'bearer'})
+        .send({name: categoryTest1.name})
+        .expect(201)
+        .then(res =>{
+          expect(res.body).toMatchObject({name: categoryTest1.name})
+          expect(res.body.account.id).toBe(accountTest1.id)
+          expect(res.body.isActive).toBeTruthy()
+          expect(res.body.id).toBe(categoryTest1.id)
+        })
+      })
+
+    })
+
+    describe('findAll - /accounts/{:idAccount}/categories (GET)', () => {
+
+      it('should return a Forbidden error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories`)
+          .auth(userTest2.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToCreateCategory)
+          .expect(404)
+      })
+
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories`)
+          .expect(401)
+      })
+
+      it('should return all categories',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(200)
+          .then(res=>{
+            expect(res.body).toHaveLength(accountTest1.categories.length)
+          })
+      })
+
+      // TODO:
+      it('should return all categories except those for which "isActive" is false',async()=>{
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(200)
+          .then(res=>{
+            expect(res.body).toHaveLength(accountTest1.categories.length - 1)
+          })
+      })
+
+
+    })
+
+    describe('findOne - /accounts/{:idAccount}/categories/{id} (GET)', () => {
+
+      it('should return a NotFound error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest2.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when id is not a valid uuid',async()=>{
+        await request(app.getHttpServer())
+        .get(`${BASE_URL}/${accountTest1.id}/categories/123456789`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(400)
+      })
+
+      it('should return a NotFound error when doesnt exist category with id',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${fakeUUID}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      // TODO:
+      it('should return a Forbidden error when category has already been deleted',async()=>{
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+      
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+        .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .expect(401)
+      })
+
+      it('should return a category',async()=>{
+        await request(app.getHttpServer())
+        .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(200)
+        .then(({body}) =>{
+          expect(typeof body.id).toBe('string')
+          expect(body.name).toBe(categoryTest1.name)
+          expect(body.account.id).toBe(accountTest1.id)
+          expect(body.isActive).toBeTruthy()
+        })
+      })
+
+    })
+
+    describe('update - /accounts/{:idAccount}/categories/{:id} (PATCH)', () => {
+
+      it('should return a Forbidden error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest2.token,{type:'bearer'})
+          .send(mockToUpdateCategory)
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToUpdateCategory)
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when id is not a valid uuid',async()=>{
+        await request(app.getHttpServer())
+        .patch(`${BASE_URL}/${accountTest1.id}/categories/123456789`)
+        .auth(userTest1.token,{type:'bearer'})
+        .send(mockToUpdateCategory)
+        .expect(400)
+      })
+
+      it('should return a BadRequest error when doesnt exist category with id',async()=>{
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${fakeUUID}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToUpdateCategory)
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when name is not specified',async()=>{
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send({})
+          .expect(400)
+      })
+      
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+        .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .send(mockToUpdateCategory)
+        .expect(401)
+      })
+
+      it('should return a NotFound error when category has already been deleted',async()=>{
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a updated category',async()=>{
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToUpdateCategory)
+          .expect(200)
+          .then(({body})=>{
+            expect(body).toMatchObject(mockToUpdateCategory)
+            expect(body.account.id).toBe(accountTest1.id)
+            expect(typeof body.id).toBe('string')
+            expect(body.isActive).toBeTruthy()
+          })
+      })
+
+    })
+
+    describe('remove - /accounts/{:idAccount}/categories/{:id} (DELETE)', () => {
+
+      it('should return a Forbidden error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .auth(userTest2.token,{type:'bearer'})
+        .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when id is not a valid uuid',async()=>{
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/123456789`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(400)
+      })
+
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+        .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .expect(401)
+      })
+
+      it('should return a BadRequest error when doesnt exist category with id',async()=>{
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${fakeUUID}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(404)
+      })
+
+      it('should return a NotFound error when when category has already been deleted',async()=>{
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(404)
+      })
+      
+
+      it('should return a deleted category',async()=>{
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(200)
+        .then(({body})=>{
+            expect(body.isActive).toBeFalsy()
+        })
+      })
+
+    })
+
+  })
+
+  describe('SubcategoriesController (e2e', () => {
+    beforeAll(()=>{
+      BASE_URL=`/accounts`,
+      COMPLEMENT_URL='/subcategories'
+    })
+
+    describe('create - /accounts/{:idAccount}/categories/{:idCategory}/subcategory (POST)', () => {
+
+      it('should return a NotFound error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest2.token,{type:'bearer'})
+          .send(subcategory1)
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(subcategory1)
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted category',async()=>{
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(subcategory1)
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when already exist subcategory on category with same name',async()=>{
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(subcategory1)
+          .expect(400)
+      })
+
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+        .send(subcategory1)
+        .expect(401)
+      })
+
+      it('should return a BadRequest error when name is not specified',async()=>{
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .send({})
+        .expect(400)
+      })
+
+      it('should return subcategory created',async()=>{
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .send(mockToCreateSubcategory)
+        .expect(201)
+        .then(res =>{
+          expect(res.body).toMatchObject(mockToCreateSubcategory)
+          expect(res.body.category.id).toBe(categoryTest1.id)
+          expect(res.body.isActive).toBeTruthy()
+          expect(typeof res.body.id).toBe('string')
+        })
+      })
+
+      it('should return subcategory reactivated when user creates subcategory with same name another subcategory deleted on same category',async()=>{
+        
+        // Elimino subcategoria primero
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+        .post(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .send({name: subcategoryTest1.name})
+        .expect(201)
+        .then(res =>{
+          expect(res.body).toMatchObject({name: subcategoryTest1.name})
+          expect(res.body.category.id).toBe(categoryTest1.id)
+          expect(res.body.isActive).toBeTruthy()
+          expect(res.body.id).toBe(subcategoryTest1.id)
+        })
+      })
+
+    })
+
+    describe('findAll - /accounts/{:idAccount}/categories/{:idCategory}/subcategory (GET)', () => {
+
+      it('should return a Forbidden error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest2.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToCreateCategory)
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted category',async()=>{
+        
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToCreateCategory)
+          .expect(404)
+      })
+
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .expect(401)
+      })
+
+      it('should return all subcategories',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(200)
+          .then(res=>{
+            expect(res.body).toHaveLength(categoryTest1.subcategories.length)
+          })
+      })
+
+      it('should return all subcategories except those for which "isActive" is false',async()=>{
+        
+        // Elimino subcategoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(200)
+          .then(res=>{
+            expect(res.body).toHaveLength(categoryTest1.subcategories.length - 1)
+          })
+      })
+
+
+    })
+
+    describe('findOne - /accounts/{:idAccount}/categories/{:idCategory}/subcategory/{:id} (GET)', () => {
+
+      it('should return a NotFound error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest2.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted category',async()=>{
+        
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when id is not a valid uuid',async()=>{
+        await request(app.getHttpServer())
+        .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/123456789`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(400)
+      })
+
+      it('should return a NotFound error when doesnt exist subcategory with id',async()=>{
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${fakeUUID}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a Forbidden error when category has already been deleted',async()=>{
+        
+        // Elimino subcategoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+      
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+        .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .expect(401)
+      })
+
+      it('should return a subcategory',async()=>{
+        await request(app.getHttpServer())
+        .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(200)
+        .then(({body}) =>{
+          expect(typeof body.id).toBe('string')
+          expect(body.name).toBe(subcategoryTest1.name)
+          expect(body.category.id).toBe(categoryTest1.id)
+          expect(body.isActive).toBeTruthy()
+        })
+      })
+
+    })
+
+    describe('update - /accounts/{:idAccount}/categories/{:idCategory}/subcategory/{:id} (PATCH)', () => {
+
+      it('should return a Forbidden error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest2.token,{type:'bearer'})
+          .send(mockToUpdateSubcategory)
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToUpdateCategory)
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted category',async()=>{
+
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToUpdateCategory)
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when id is not a valid uuid',async()=>{
+        await request(app.getHttpServer())
+        .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/123456789`)
+        .auth(userTest1.token,{type:'bearer'})
+        .send(mockToUpdateSubcategory)
+        .expect(400)
+      })
+
+      it('should return a BadRequest error when doesnt exist subcategory with id',async()=>{
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${fakeUUID}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToUpdateSubcategory)
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when name is not specified',async()=>{
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send({})
+          .expect(400)
+      })
+      
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+        .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .send(mockToUpdateSubcategory)
+        .expect(401)
+      })
+
+      it('should return a NotFound error when category has already been deleted',async()=>{
+        
+        // Elimino subcategoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .get(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a updated subcategory',async()=>{
+        await request(app.getHttpServer())
+          .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .send(mockToUpdateSubcategory)
+          .expect(200)
+          .then(({body})=>{
+            expect(body).toMatchObject(mockToUpdateSubcategory)
+            expect(body.category.id).toBe(categoryTest1.id)
+            expect(typeof body.id).toBe('string')
+            expect(body.isActive).toBeTruthy()
+          })
+      })
+
+    })
+
+    describe('remove - /accounts/{:idAccount}/categories/{:idCategory}/subcategory/{:id} (DELETE)', () => {
+
+      it('should return a Forbidden error when user to not belong to account try to access',async()=>{
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .auth(userTest2.token,{type:'bearer'})
+        .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted account',async()=>{
+        // Elimina cuenta primero
+        await request(app.getHttpServer())
+          .delete(`/accounts/${accountTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a NotFound error when user try to access to deleted category',async()=>{
+        // Elimino categoria primero
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a BadRequest error when id is not a valid uuid',async()=>{
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/123456789`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(400)
+      })
+
+      it('should return a Unauthorized error when user not authenticated',async()=>{
+        await request(app.getHttpServer())
+        .patch(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .expect(401)
+      })
+
+      it('should return a BadRequest error when doesnt exist subcategory with id',async()=>{
+        await request(app.getHttpServer())
+          .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${fakeUUID}`)
+          .auth(userTest1.token,{type:'bearer'})
+          .expect(404)
+      })
+
+      it('should return a NotFound error when when subcategory has already been deleted',async()=>{
+        
+        // Elimino subcategoria primero
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(404)
+      })
+      
+
+      it('should return a deleted subcategory',async()=>{
+        await request(app.getHttpServer())
+        .delete(`${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`)
+        .auth(userTest1.token,{type:'bearer'})
+        .expect(200)
+        .then(({body})=>{
+            expect(body.isActive).toBeFalsy()
+        })
+      })
+
+    })
+
+  })
 
 })

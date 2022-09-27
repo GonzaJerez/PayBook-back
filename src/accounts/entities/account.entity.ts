@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { User } from "../../users/entities/user.entity";
-import { Column, Entity, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import {Category} from "../../categories/entities/category.entity";
 
 @Entity('accounts')
 export class Account {
@@ -85,4 +86,15 @@ export class Account {
         user => user.accounts_admin
     )
     admin_user: User;
+
+    @ApiProperty({
+        type: [Category],
+        description: 'Categories to have this account'
+    })
+    @OneToMany(
+        ()=> Category,
+        categories => categories.account,
+        {cascade:true,eager:true}
+    )
+    categories?: Category[];
 }

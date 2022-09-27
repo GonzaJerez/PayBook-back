@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiOkResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
 
 import { AuthController } from '../auth/auth.controller';
@@ -96,6 +96,7 @@ export class UsersController extends AuthController {
     return this.usersService.reactivate(id)
   }
 
+  @HttpCode(200)
   @Post('premium')
   @Auth()
   becomePremium(

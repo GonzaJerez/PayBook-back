@@ -10,7 +10,6 @@ import { AccountsModule } from '../accounts/accounts.module';
   providers: [UsersService],
   imports: [
     AuthModule,
-    ConfigModule,
     AccountsModule
   ],
 })

@@ -1,10 +1,10 @@
 import {BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {validate as uuidValidate} from 'uuid'
+import {Repository} from 'typeorm';
 
 import {generateAccountAccessKey} from '../common/helpers/generateAccountAccessKey';
 import {User} from '../users/entities/user.entity';
-import {Repository, SelectQueryBuilder} from 'typeorm';
 import {CreateAccountDto} from './dto/create-account.dto';
 import {UpdateAccountDto} from './dto/update-account.dto';
 import {Account} from './entities/account.entity';
@@ -12,6 +12,9 @@ import {ValidRoles} from '../auth/interfaces';
 import {PaginationDto} from '../common/dtos/pagination.dto';
 import {JoinAccountDto} from './dto/join-account.dto';
 import {PushOutAccountDto} from './dto/push-out-account.dto';
+import {Category} from '../categories/entities/category.entity';
+import {defaultCategories} from '../categories/data/default-categories';
+import {Subcategory} from '../subcategories/entities/subcategory.entity';
 
 @Injectable()
 export class AccountsService {
@@ -21,7 +24,11 @@ export class AccountsService {
 
     constructor(
         @InjectRepository(Account)
-        private readonly accountRepository: Repository<Account>
+        private readonly accountRepository: Repository<Account>,
+        @InjectRepository(Category)
+        private readonly categoryRepository: Repository<Category>,
+        @InjectRepository(Subcategory)
+        private readonly subcategoryRepository: Repository<Subcategory>
     ) {}
 
 
@@ -30,6 +37,7 @@ export class AccountsService {
         this.validateLimitAccounts(user)
 
         try {
+            // Creo cuenta
             const account = this.accountRepository.create({
                 ...createAccountDto,
                 access_key: generateAccountAccessKey(),
@@ -37,6 +45,20 @@ export class AccountsService {
                 creator_user: user,
                 users: [user]
             })
+
+            // Creo categorias por defecto para la cuenta creada
+            const categories = this.categoryRepository.create(
+                defaultCategories.map(cat => ({
+                    name:cat.name,
+                    subcategories: this.subcategoryRepository.create(
+                        cat.subcategories.map( subcat => ({
+                          name: subcat
+                        }))
+                    )
+                }))
+            )
+                
+            account.categories = categories;
 
             await this.accountRepository.save(account)
             return account
@@ -195,6 +217,7 @@ export class AccountsService {
         this.isAdminAccount(account, user)
 
         account.isActive = false;
+        account.users = []
 
         try {
             await this.accountRepository.save(account)

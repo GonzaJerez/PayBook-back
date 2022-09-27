@@ -5,6 +5,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import {fakeUUID, mockToCreateUser, mockToCreateUser2, mockUserToUpdate} from '../src/users/mocks/userMocks';
 import {UserWithToken} from 'src/users/interfaces/UserWithToken.interface';
+import {ValidRoles} from 'src/auth/interfaces';
 
 describe('UsersController (e2e)', () => {
   let app: INestApplication;
@@ -362,6 +363,21 @@ describe('UsersController (e2e)', () => {
           expect(res.body.isActive).toBeTruthy()
         })
     })
+
+  })
+
+  describe('becomePremium - /users/premium', () => {
+
+    it('should return a user with roles = premium',async()=>{
+      await request(app.getHttpServer())
+        .post('/users/premium')
+        .auth(seedUsers[0].token,{type:'bearer'})
+        .expect(200)
+        .then(res => {
+          expect(res.body.roles).toEqual([ValidRoles.USER_PREMIUM])
+        })
+    })
+    
   })
 
 });

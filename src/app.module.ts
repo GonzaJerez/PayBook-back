@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
@@ -7,6 +7,8 @@ import { AccountsModule } from './accounts/accounts.module';
 import { AdminModule } from './admin/admin.module';
 import { UsersModule } from './users/users.module';
 import { SeedModule } from './seed/seed.module';
+import { CategoriesModule } from './categories/categories.module';
+import { SubcategoriesModule } from './subcategories/subcategories.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { SeedModule } from './seed/seed.module';
     AdminModule,
     UsersModule,
     SeedModule,
+    CategoriesModule,
+    SubcategoriesModule,
   ],
   controllers: [],
   providers: [],
