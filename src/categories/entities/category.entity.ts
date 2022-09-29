@@ -1,7 +1,8 @@
 import {ApiProperty} from "@nestjs/swagger";
-import {Account} from "../../accounts/entities/account.entity";
 import {Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn} from "typeorm";
+import {Account} from "../../accounts/entities/account.entity";
 import {Subcategory} from "../../subcategories/entities/subcategory.entity";
+import {Expense} from "../../expenses/entities/expense.entity";
 
 @Entity('categories')
 export class Category {
@@ -50,4 +51,15 @@ export class Category {
         {cascade:true,eager:true}
     )
     subcategories?: Subcategory[]
+
+    @ApiProperty({
+        type: [Expense],
+        description: 'Expenses that belong to this category'
+    })
+    @OneToMany(
+        ()=> Expense,
+        expenses => expenses.category,
+        // {cascade:true}
+    )
+    expenses?: Expense[];
 }

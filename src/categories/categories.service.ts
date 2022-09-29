@@ -21,15 +21,18 @@ export class CategoriesService {
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto, idAccount: string) {
-    const nameCategory = createCategoryDto.name.trim()
+
+    // Capitalizar nombres para guardar
+    const nameCategory = createCategoryDto.name.trim().toLowerCase()
+    const capitalizeName = nameCategory.replace(nameCategory[0], nameCategory[0].toUpperCase())
 
     // Busca cuenta actual
     const account = await this.findActualAccount(idAccount)
-
+    
     // Valida que no exista una categoria activa llamada igual en la misma cuenta
-    const existNameCategory = account.categories.find(cat => cat.name === nameCategory)
+    const existNameCategory = account.categories.find(cat => cat.name === capitalizeName)
     if (existNameCategory && existNameCategory.isActive)
-      throw new BadRequestException(`Already exist category named ${nameCategory} on this account`)
+      throw new BadRequestException(`Already exist category named ${capitalizeName} on this account`)
 
     try {
       let category:Category
@@ -46,7 +49,7 @@ export class CategoriesService {
       // Si no existia categoria con ese nombre creo una nueva
       if (!existNameCategory) {
         category = this.categoryRepository.create({
-          name: nameCategory,
+          name: capitalizeName,
           account
         })
       }

@@ -1,7 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Account } from '../../accounts/entities/account.entity';
 import {Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn} from 'typeorm'
+
+import { Account } from '../../accounts/entities/account.entity';
 import { ValidRoles } from '../../auth/interfaces';
+import {Expense} from '../../expenses/entities/expense.entity';
 
 @Entity('users')
 export class User {
@@ -80,4 +82,15 @@ export class User {
         account => account.admin_user,
     )
     accounts_admin?: Account[]
+
+    @ApiProperty({
+        type: [Expense],
+        description: 'Expenses by this user'
+    })
+    @OneToMany(
+        ()=> Expense,
+        expenses => expenses.user,
+        // {cascade:true}
+    )
+    expenses?: Expense[];
 }

@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { SeedModule } from './seed/seed.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SubcategoriesModule } from './subcategories/subcategories.module';
+import { ExpensesModule } from './expenses/expenses.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SubcategoriesModule } from './subcategories/subcategories.module';
     SeedModule,
     CategoriesModule,
     SubcategoriesModule,
+    ExpensesModule,
   ],
   controllers: [],
   providers: [],

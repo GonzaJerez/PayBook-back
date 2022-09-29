@@ -71,19 +71,19 @@ export class AccountsService {
 
     async findAll(queryParameters: PaginationDto) {
 
-        const {limit = 10, offset = 0} = queryParameters;
+        const {limit = 10, skip = 0} = queryParameters;
 
         try {
             const [accounts, totalAccounts] = await this.accountRepository.findAndCount({
                 take: limit,
-                skip: offset,
+                skip: skip,
                 relations: {creator_user: true, admin_user: true, users: true}
             })
 
             return {
                 totalAccounts,
                 limit,
-                offset,
+                skip,
                 accounts
             };
         } catch (error) {
@@ -242,7 +242,8 @@ export class AccountsService {
      * @param user usuario que hace peticion
      */
     private validateLimitAccounts(user: User) {
-        if (user.accounts.length === this.LIMIT_FREE_ACCOUNT && user.roles.includes(ValidRoles.USER))
+        const activeAccounts = user.accounts.filter( account => account.isActive)
+        if (activeAccounts.length === this.LIMIT_FREE_ACCOUNT && user.roles.includes(ValidRoles.USER))
             throw new ForbiddenException('To create a more accounts user needs to be premium')
     }
 

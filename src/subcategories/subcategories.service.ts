@@ -21,14 +21,17 @@ export class SubcategoriesService {
   ) {}
 
   async create(createSubcategoryDto: CreateSubcategoryDto, idCategory: string) {
-    const nameSubcategory = createSubcategoryDto.name.trim()
+
+    // Capitalizar nombres para guardar
+    const nameSubcategory = createSubcategoryDto.name.trim().toLowerCase()
+    const capitalizeName = nameSubcategory.replace(nameSubcategory[0], nameSubcategory[0].toUpperCase())
 
     const category = await this.findActualCategory(idCategory)
 
     // Valida que no exista una subcategoria activa llamada igual en la misma categoria
-    const existNameSubcategory = category.subcategories.find(cat => cat.name === nameSubcategory)
+    const existNameSubcategory = category.subcategories.find(cat => cat.name === capitalizeName)
     if (existNameSubcategory && existNameSubcategory.isActive)
-      throw new BadRequestException(`Already exist subcategory named ${nameSubcategory} on this category`)
+      throw new BadRequestException(`Already exist subcategory named ${capitalizeName} on this category`)
 
       try {
         let subcategory:Subcategory
@@ -45,7 +48,7 @@ export class SubcategoriesService {
         // Si no existia subcategoria con ese nombre creo una nueva
         if (!existNameSubcategory) {
           subcategory = this.subcategoryRepository.create({
-            name: nameSubcategory,
+            name: capitalizeName,
             category
           })
         }

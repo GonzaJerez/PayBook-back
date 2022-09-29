@@ -83,17 +83,17 @@ export class UsersService extends AuthService {
   }
 
   async findAll(queryParameters: PaginationDto) {
-    const {limit = 10, offset = 0} = queryParameters;
+    const {limit = 10, skip = 0} = queryParameters;
     try {
       const [users, totalUsers] = await this.userRepository.findAndCount({
         take: limit,
-        skip: offset,
+        skip: skip,
       });
 
       return {
         totalUsers,
         limit,
-        skip: offset,
+        skip: skip,
         users,
       }
     } catch (error) {

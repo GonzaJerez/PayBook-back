@@ -1,4 +1,6 @@
 import * as bcrypt from 'bcrypt'
+import {CreateExpenseDto} from 'src/expenses/dto/create-expense.dto'
+import {Expense} from 'src/expenses/entities/expense.entity'
 import {CreateSubcategoryDto} from 'src/subcategories/dto/create-subcategory.dto'
 import {CreateAccountDto} from '../../accounts/dto/create-account.dto'
 import {CreateCategoryDto} from '../../categories/dto/create-category.dto'
@@ -52,26 +54,55 @@ export const account3:CreateAccountDto = {
 
 // CATEGORIES
 export const category1: CreateCategoryDto ={
-    name: 'Categoria Seed 1'
+    name: 'Categoria seed 1'
 }
 
 export const category2: CreateCategoryDto ={
-    name: 'Categoria Seed 2'
+    name: 'Categoria seed 2'
 }
 
 export const category3: CreateCategoryDto ={
-    name: 'Categoria Seed 3'
+    name: 'Categoria seed 3'
 }
 
 // SUBCATEGORIES
 export const subcategory1: CreateSubcategoryDto ={
-    name: 'Subcategoria Seed 1'
+    name: 'Subcategoria seed 1'
 }
 
 export const subcategory2: CreateSubcategoryDto ={
-    name: 'Subcategoria Seed 2'
+    name: 'Subcategoria seed 2'
 }
 
 export const subcategory3: CreateSubcategoryDto ={
-    name: 'Subcategoria Seed 3'
+    name: 'Subcategoria seed 3'
+}
+
+export const subcategory4: CreateSubcategoryDto ={
+    name: 'Subcategoria seed 4'
+}
+
+// EXPENSES
+export const expense1 = {
+    amount: 1500,
+    description: 'Description for expense1',
+    complete_date: Date.now(),
+}
+
+export const expense2 = {
+    amount: 1100,
+    description: 'Description for expense2',
+    complete_date: new Date('05/11/2021').getTime()
+}
+
+export const expense3 = {
+    amount: 600,
+    description: 'Description for expense3',
+    complete_date: new Date('02/19/2022').getTime()
+}
+
+export const expense4 = {
+    amount: 3000,
+    description: 'Description for expense4',
+    complete_date: new Date('08/31/2020').getTime()
 }

@@ -6,6 +6,7 @@ import {AuthModule} from '../auth/auth.module';
 import {AccountsModule} from '../accounts/accounts.module';
 import {CheckDevEnv} from './middlewares/check-dev-env.middleware';
 import {CategoriesModule} from '../categories/categories.module';
+import {ExpensesModule} from '../expenses/expenses.module';
 
 @Module({
   controllers: [SeedController],
@@ -13,7 +14,8 @@ import {CategoriesModule} from '../categories/categories.module';
   imports:[
     AuthModule,
     AccountsModule,
-    CategoriesModule
+    CategoriesModule,
+    ExpensesModule
   ]
 })
 export class SeedModule implements NestModule {

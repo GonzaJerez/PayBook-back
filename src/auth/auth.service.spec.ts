@@ -97,12 +97,12 @@ describe('AuthService', () => {
 
     it('should return array of users, with querys', async()=>{
       const LIMIT = 5;
-      const OFFSET = 10;
+      const SKIP = 10;
 
-      expect(await service.findAll({limit:LIMIT,offset:OFFSET})).toEqual({
+      expect(await service.findAll({limit:LIMIT,skip:SKIP})).toEqual({
         totalUsers: 1,
         limit: LIMIT,
-        skip: OFFSET,
+        skip: SKIP,
         users: [mockCompleteUser],
       })
     })
