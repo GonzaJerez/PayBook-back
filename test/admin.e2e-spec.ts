@@ -7,11 +7,15 @@ import {mockToCreateAdmin} from '../src/users/mocks/userMocks';
 
 describe('AdminController (e2e)', () => {
   let app: INestApplication;
+  const BASE_URL='/admin'
+  let COMPLEMENT_URL=''
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule]
     }).compile();
+
+    process.env.NODE_ENV = 'test'
 
     app = moduleFixture.createNestApplication();
 
@@ -27,21 +31,29 @@ describe('AdminController (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
-  });
-
-  beforeAll(async()=>{
-    await request(app.getHttpServer())
-      .get('/seed/clean')
-      .expect(200,{
-        message: 'DB cleaned'
-      })
   })
 
+  beforeEach(async()=>{
+    await request(app.getHttpServer())
+      .get('/seed')
+      .expect(200)
+  })
+
+  
   describe('createAdmin - /admin/register (POST)', () => {
+    beforeAll(()=>{
+      COMPLEMENT_URL='/register'
+    })
 
     it('should create a new admin', async () => {
+
+      // Limpio DB
       await request(app.getHttpServer())
-        .post('/admin/register')
+        .get('/seed/clean')
+        .expect(200)
+
+      await request(app.getHttpServer())
+        .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send(mockToCreateAdmin)
         .expect(201)
     })
@@ -53,7 +65,7 @@ describe('AdminController (e2e)', () => {
         .expect(200)
 
       await request(app.getHttpServer())
-        .post('/admin/register')
+        .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send(mockToCreateAdmin)
         .expect(403)
         .then(res => {

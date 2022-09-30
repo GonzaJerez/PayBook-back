@@ -14,16 +14,20 @@ import { ExpensesModule } from './expenses/expenses.module';
 @Module({
   imports: [
     AuthModule,
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      envFilePath: process.env.NODE_ENV === 'production'
+        ? '.env.prod'
+        : '.env'
+    }),
     TypeOrmModule.forRoot({
-      ssl: process.env.STAGE === 'prod',
-      extra: {
-        ssl: process.env.STAGE === 'prod'
-          ? { rejectUnauthorized: false }
-          : null
-      },
+      // ssl: process.env.STAGE === 'prod',
+      // extra: {
+      //   ssl: process.env.STAGE === 'prod'
+      //     ? { rejectUnauthorized: false }
+      //     : null
+      // },
       type: 'postgres',
-      host: process.env.DB_HOST,
+      host: (process.env.NODE_ENV === 'test') ? 'localhost' : process.env.DB_HOST,
       port: +process.env.DB_PORT,
       database: process.env.DB_NAME,
       username: process.env.DB_USERNAME,
@@ -43,4 +47,9 @@ import { ExpensesModule } from './expenses/expenses.module';
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule {
+  constructor(){
+    // console.log({environment: process.env});
+    
+  }
+}

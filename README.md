@@ -54,6 +54,9 @@ $ docker compose up
 ## Test
 
 ```bash
+# 1. Build up DB for testing
+$ docker compose up -d db_dev
+
 # e2e tests watch mode
 $ npm run test:e2e:watch
 ```

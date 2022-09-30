@@ -4,18 +4,26 @@ import * as request from 'supertest';
 
 import { AppModule } from '../src/app.module';
 import {fakeUUID, mockToCreateUser, mockToCreateUser2, mockUserToUpdate} from '../src/users/mocks/userMocks';
-import {UserWithToken} from 'src/users/interfaces/UserWithToken.interface';
-import {ValidRoles} from 'src/auth/interfaces';
+import {UserWithToken} from '../src/users/interfaces/UserWithToken.interface';
+import {ValidRoles} from '../src/auth/interfaces';
+import {defaultCategories} from '../src/categories/data/default-categories';
 
 describe('UsersController (e2e)', () => {
   let app: INestApplication;
-  let seedUsers:UserWithToken[]
-  let seedAdmin:UserWithToken
+  let seedUsers: UserWithToken[]
+  let seedAdmin: UserWithToken
+  const BASE_URL='/users'
+  let COMPLEMENT_URL=''
+
+  let userTest1:UserWithToken;
+  let userTest2:UserWithToken;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule]
     }).compile();
+
+    process.env.NODE_ENV = 'test'
 
     app = moduleFixture.createNestApplication();
 
@@ -31,7 +39,7 @@ describe('UsersController (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
-  });
+  })
 
   beforeEach(async()=>{
     await request(app.getHttpServer())
@@ -40,38 +48,50 @@ describe('UsersController (e2e)', () => {
       .then(res => {
         seedUsers = res.body.users
         seedAdmin = res.body.admin
+
+        userTest1 = seedUsers[0]
+        userTest2 = seedUsers[1]
       })
   })
 
   describe('create - /users/register (POST)', () => {
+    beforeAll(()=>{
+      COMPLEMENT_URL='/register'
+    })
 
     it('should create a new user', async () => {
       await request(app.getHttpServer())
-        .post('/users/register')
+        .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send(mockToCreateUser)
         .expect(201)
         .then(res => {
           expect(res.body.accounts).toHaveLength(1)
+          expect(res.body.accounts[0].categories).toHaveLength(defaultCategories.length)
+          expect(res.body.accounts[0].categories[0].subcategories).toHaveLength(defaultCategories[0].subcategories.length)
+          expect(res.body.accounts[0].categories[1].subcategories).toHaveLength(defaultCategories[1].subcategories.length)
         })
     });
 
     it('should create a third user with other email', async () => {
       await request(app.getHttpServer())
-        .post('/users/register')
+        .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send(mockToCreateUser2)
         .expect(201)
         .then(res => {
           expect(res.body.accounts).toHaveLength(1)
+          expect(res.body.accounts[0].categories).toHaveLength(defaultCategories.length)
+          expect(res.body.accounts[0].categories[0].subcategories).toHaveLength(defaultCategories[0].subcategories.length)
+          expect(res.body.accounts[0].categories[1].subcategories).toHaveLength(defaultCategories[1].subcategories.length)
         })
     });
 
     it('should return error when email user already exist', async () => {
       await request(app.getHttpServer())
-        .post('/users/register')
+        .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send(mockToCreateUser)
 
       await request(app.getHttpServer())
-        .post('/users/register')
+        .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send(mockToCreateUser)
         .expect(400)
     });
@@ -82,7 +102,7 @@ describe('UsersController (e2e)', () => {
     it('should return all users', async () => {
 
       await request(app.getHttpServer())
-        .get('/users')
+        .get(`${BASE_URL}`)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(200)
         .then(res => {
@@ -94,7 +114,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return an unauthorized error when req not contain token', async () => {
       await request(app.getHttpServer())
-        .get('/users')
+        .get(`${BASE_URL}`)
         .expect(401)
     })
   })
@@ -103,11 +123,11 @@ describe('UsersController (e2e)', () => {
 
     it('should return a user by id when is same user', async () => {
       await request(app.getHttpServer())
-        .get(`/users/${seedUsers[0].id}`)
-        .auth(seedUsers[0].token, { type: 'bearer' })
+        .get(`${BASE_URL}/${userTest1.id}`)
+        .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then(res => {
-          expect(res.body).toMatchObject({id: seedUsers[0].id})
+          expect(res.body).toMatchObject({id: userTest1.id})
           expect(res.body).toHaveProperty('accounts')
           expect(res.body).toHaveProperty('accounts_owner')
           expect(res.body).toHaveProperty('accounts_admin')
@@ -116,11 +136,11 @@ describe('UsersController (e2e)', () => {
 
     it('should return a user by id when is admin', async () => {
       await request(app.getHttpServer())
-        .get(`/users/${seedUsers[0].id}`)
+        .get(`${BASE_URL}/${userTest1.id}`)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(200)
         .then(res => {
-          expect(res.body).toMatchObject({id: seedUsers[0].id})
+          expect(res.body).toMatchObject({id: userTest1.id})
           expect(res.body).toHaveProperty('accounts')
           expect(res.body).toHaveProperty('accounts_owner')
           expect(res.body).toHaveProperty('accounts_admin')
@@ -129,14 +149,14 @@ describe('UsersController (e2e)', () => {
 
     it('should return a Forbidden error when is other user', async () => {
       await request(app.getHttpServer())
-        .get(`/users/${seedUsers[0].id}`)
-        .auth(seedUsers[1].token, { type: 'bearer' })
+        .get(`${BASE_URL}/${userTest1.id}`)
+        .auth(userTest2.token, { type: 'bearer' })
         .expect(403)
     })
 
     it('should return an unauthorized error when not exist token', async () => {
       await request(app.getHttpServer())
-        .get(`/users/${seedUsers[0].id}`)
+        .get(`${BASE_URL}/${userTest1.id}`)
         .expect(401, {
           statusCode: 401,
           message: 'Unauthorized'
@@ -145,7 +165,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return an unauthorized error when token is not valid', async () => {
       await request(app.getHttpServer())
-        .get(`/users/${seedUsers[0].id}`)
+        .get(`${BASE_URL}/${userTest1.id}`)
         .auth('123456789', { type: 'bearer' })
         .expect(401, {
           statusCode: 401,
@@ -155,7 +175,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return a BadRequest error when id isnt a valid uuid', async () => {
       await request(app.getHttpServer())
-        .get(`/users/123456789`)
+        .get(`${BASE_URL}/123456789`)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(400, {
           statusCode: 400,
@@ -166,7 +186,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return a BadRequest error when id doesnt exist', async () => {
       await request(app.getHttpServer())
-        .get(`/users/${fakeUUID}`)
+        .get(`${BASE_URL}/${fakeUUID}`)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(404)
     })
@@ -176,9 +196,9 @@ describe('UsersController (e2e)', () => {
 
     it('should return an updated user when updated by himself', async () => {
       await request(app.getHttpServer())
-        .patch(`/users/${seedUsers[0].id}`)
+        .patch(`${BASE_URL}/${userTest1.id}`)
         .send(mockUserToUpdate)
-        .auth(seedUsers[0].token, { type: 'bearer' })
+        .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then( res => {
           expect(res.body).toMatchObject({...mockUserToUpdate})
@@ -187,9 +207,9 @@ describe('UsersController (e2e)', () => {
 
     it('should return an updated user when updated by an admin', async () => {
       await request(app.getHttpServer())
-        .patch(`/users/${seedUsers[0].id}`)
+        .patch(`${BASE_URL}/${userTest1.id}`)
         .send(mockUserToUpdate)
-        .auth(seedUsers[0].token, { type: 'bearer' })
+        .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then( res => {
           expect(res.body).toMatchObject({...mockUserToUpdate})
@@ -198,9 +218,9 @@ describe('UsersController (e2e)', () => {
 
     it('should return a Forbidden error when some user want to update other user', async () => {
       await request(app.getHttpServer())
-        .patch(`/users/${seedUsers[0].id}`)
+        .patch(`${BASE_URL}/${userTest1.id}`)
         .send(mockUserToUpdate)
-        .auth(seedUsers[1].token, { type: 'bearer' })
+        .auth(userTest2.token, { type: 'bearer' })
         .expect(403, {
           statusCode: 403,
           message: "You don't have permission to perform this action",
@@ -210,7 +230,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return an unauthorized error when not exist token', async () => {
       await request(app.getHttpServer())
-        .patch(`/users/${seedUsers[0].id}`)
+        .patch(`${BASE_URL}/${userTest1.id}`)
         .send(mockUserToUpdate)
         .expect(401, {
           statusCode: 401,
@@ -220,7 +240,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return an unauthorized error when token is not valid', async () => {
       await request(app.getHttpServer())
-        .patch(`/users/${seedUsers[0].id}`)
+        .patch(`${BASE_URL}/${userTest1.id}`)
         .send(mockUserToUpdate)
         .auth('123456789', { type: 'bearer' })
         .expect(401, {
@@ -231,7 +251,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return a BadRequest error when id isnt a valid uuid', async () => {
       await request(app.getHttpServer())
-        .patch(`/users/123456789`)
+        .patch(`${BASE_URL}/123456789`)
         .send(mockUserToUpdate)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(400, {
@@ -243,7 +263,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return a BadRequest error when id doesnt exist', async () => {
       await request(app.getHttpServer())
-        .patch(`/users/${fakeUUID}`)
+        .patch(`${BASE_URL}/${fakeUUID}`)
         .send(mockUserToUpdate)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(404)
@@ -261,8 +281,8 @@ describe('UsersController (e2e)', () => {
 
     it('should return a Forbidden error when some user want to remove other user', async () => {
       await request(app.getHttpServer())
-        .delete(`/users/${seedUsers[0].id}`)
-        .auth(seedUsers[1].token, { type: 'bearer' })
+        .delete(`${BASE_URL}/${userTest1.id}`)
+        .auth(userTest2.token, { type: 'bearer' })
         .expect(403, {
           statusCode: 403,
           message: "You don't have permission to perform this action",
@@ -272,7 +292,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return an unauthorized error when not exist token', async () => {
       await request(app.getHttpServer())
-        .delete(`/users/${seedUsers[0].id}`)
+        .delete(`${BASE_URL}/${userTest1.id}`)
         .expect(401, {
           statusCode: 401,
           message: 'Unauthorized'
@@ -281,7 +301,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return an unauthorized error when token is not valid', async () => {
       await request(app.getHttpServer())
-        .delete(`/users/${seedUsers[0].id}`)
+        .delete(`${BASE_URL}/${userTest1.id}`)
         .auth('123456789', { type: 'bearer' })
         .expect(401, {
           statusCode: 401,
@@ -291,7 +311,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return a BadRequest error when id isnt a valid uuid', async () => {
       await request(app.getHttpServer())
-        .delete(`/users/123456789`)
+        .delete(`${BASE_URL}/123456789`)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(400, {
           statusCode: 400,
@@ -302,7 +322,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return a BadRequest error when id doesnt exist', async () => {
       await request(app.getHttpServer())
-        .delete(`/users/${fakeUUID}`)
+        .delete(`${BASE_URL}/${fakeUUID}`)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(404)
         .then(res => {
@@ -316,8 +336,8 @@ describe('UsersController (e2e)', () => {
 
     it('should change prop "isActive" to false when user closes his account', async () => {
       await request(app.getHttpServer())
-        .delete(`/users/${seedUsers[0].id}`)
-        .auth(seedUsers[0].token, { type: 'bearer' })
+        .delete(`${BASE_URL}/${userTest1.id}`)
+        .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then(res=>{
           expect(res.body.isActive).toBeFalsy()
@@ -326,7 +346,7 @@ describe('UsersController (e2e)', () => {
 
     it('should change prop "isActive" of user to false when an admin closes his account', async () => {
         await request(app.getHttpServer())
-          .delete(`/users/${seedUsers[0].id}`)
+          .delete(`${BASE_URL}/${userTest1.id}`)
           .auth(seedAdmin.token, { type: 'bearer' })
           .expect(200)
           .then(res=>{
@@ -336,17 +356,20 @@ describe('UsersController (e2e)', () => {
   })
 
   describe('reactivate - /users/reactivate/:id (PATCH)', () => {
+    beforeAll(()=>{
+      COMPLEMENT_URL='/reactivate'
+    })
 
     it('should return a Forbidden error when user try to reactivate by himself', async () => {
 
       // Delete account
       await request(app.getHttpServer())
-          .delete(`/users/${seedUsers[0].id}`)
+          .delete(`${BASE_URL}/${userTest1.id}`)
           .auth(seedAdmin.token, { type: 'bearer' })
 
       await request(app.getHttpServer())
-        .patch(`/users/reactivate/${seedUsers[0].id}`)
-        .auth(seedUsers[0].token, { type: 'bearer' })
+        .patch(`${BASE_URL}${COMPLEMENT_URL}/${userTest1.id}`)
+        .auth(userTest1.token, { type: 'bearer' })
         .expect(403, {
           statusCode: 403,
           message: 'User deleted. Contact the admin',
@@ -356,22 +379,24 @@ describe('UsersController (e2e)', () => {
 
     it('should reactivate user account when an admin do it', async () => {
       await request(app.getHttpServer())
-        .patch(`/users/reactivate/${seedUsers[0].id}`)
+        .patch(`${BASE_URL}${COMPLEMENT_URL}/${userTest1.id}`)
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(200)
         .then(res =>{
           expect(res.body.isActive).toBeTruthy()
         })
     })
-
   })
 
   describe('becomePremium - /users/premium', () => {
+    beforeAll(()=>{
+      COMPLEMENT_URL='/premium'
+    })
 
     it('should return a user with roles = premium',async()=>{
       await request(app.getHttpServer())
-        .post('/users/premium')
-        .auth(seedUsers[0].token,{type:'bearer'})
+        .post(`${BASE_URL}${COMPLEMENT_URL}`)
+        .auth(userTest1.token,{type:'bearer'})
         .expect(200)
         .then(res => {
           expect(res.body.roles).toEqual([ValidRoles.USER_PREMIUM])
