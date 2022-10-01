@@ -26,6 +26,6 @@ RUN npm install --omit=dev
 
 COPY --from=deps /app/dist ./dist
 
-COPY --from=deps /app/.env ./
+# COPY --from=deps /app/.env ./
 
 CMD [ "node","dist/main" ]
