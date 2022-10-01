@@ -13,7 +13,7 @@
 An app to management the expenses easily.
 
 
-## Running the app (build up postgres DB) - Development
+## Build up postgres DB - Development
 
 ```bash
 # 1. Install dependencies
@@ -38,7 +38,7 @@ $ docker compose down
 ```
 
 
-## Running the production app - Production
+## Running the production mode app on local - Production
 
 ```bash
 # 1. Clone ".env.example" to ".env" file and complete with production environments variables
