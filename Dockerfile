@@ -1,9 +1,31 @@
-FROM node:16-alpine3.15
+# Install dependencies only when needed
+FROM node:16-alpine3.15 AS deps
 
-RUN mkdir -p /home/app
+WORKDIR /app
 
-WORKDIR /home/app
+COPY package.json package-lock.json ./
 
-EXPOSE 3000
+RUN npm install
 
-CMD ["npm", "run", "start:dev"]
+COPY . .
+
+RUN npm run build
+
+
+# Production image, copy all the files and run next
+FROM node:16-alpine3.15 AS prod
+
+# Set working directory
+WORKDIR /usr/src/app
+
+ENV PROD true
+
+COPY package*.json ./
+
+RUN npm install --omit=dev
+
+COPY --from=deps /app/dist ./dist
+
+COPY --from=deps /app/.env ./
+
+CMD [ "node","dist/main" ]

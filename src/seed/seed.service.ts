@@ -11,6 +11,8 @@ import {ValidRoles} from '../auth/interfaces';
 import {Category} from '../categories/entities/category.entity';
 import {Subcategory} from '../subcategories/entities/subcategory.entity';
 import {Expense} from '../expenses/entities/expense.entity';
+import {daysNames} from '../expenses/utils/days-names';
+import {getNumberOfWeek} from '../common/helpers/getNumberOfWeek';
 
 @Injectable()
 export class SeedService {
@@ -209,15 +211,21 @@ export class SeedService {
   }
 
   private createExpensesForEachAccount(){
+    const currentDate = new Date()
+    const month = currentDate.getMonth() + 1
+    const num_date = currentDate.getDate()
+    const year = currentDate.getFullYear()
+    const day_name = daysNames[currentDate.getDay() - 1]
+    const week = getNumberOfWeek()
 
     const mocksExpenses = [
       {
         ...expense1,
-        day_name: 'Martes',
-        month: 9,
-        num_date: 25,
-        year: 2022,
-        week: 39
+        day_name,
+        month,
+        num_date,
+        year,
+        week,
       },
       {
         ...expense2,

@@ -12,6 +12,7 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 import {Expense} from './entities/expense.entity';
 import {daysNames} from './utils/days-names';
 import {FiltersExpensesDto} from './dto/filters-expenses.dto';
+import {getNumberOfWeek} from '../common/helpers/getNumberOfWeek';
 
 @Injectable()
 export class ExpensesService {
@@ -51,7 +52,7 @@ export class ExpensesService {
         subcategory,
         account,
         user,
-        week: this.getNumberOfWeek()
+        week: getNumberOfWeek()
       })
 
       await this.expenseRepository.save(expense);
@@ -86,7 +87,7 @@ export class ExpensesService {
       // TODO: Costos mensuales agregarlo como prop de cuenta
       // let totalFixedCostsMonthly = 0;
 
-      const actualWeek = this.getNumberOfWeek()
+      const actualWeek = getNumberOfWeek()
       
       expenses.forEach( expense =>{
         
@@ -424,16 +425,6 @@ export class ExpensesService {
       totalAmountsForCategories,
       totalAmountsForSubcategories
     }
-  }
-
-  private getNumberOfWeek(){
-    const currentDate = new Date();
-
-    const oneJanuary = new Date(currentDate.getFullYear(),0,1).getMilliseconds();
-    const numberOfDays = Math.floor((currentDate.getMilliseconds() - oneJanuary) / (1000 * 60 * 60 * 24))
-    const result = Math.ceil((currentDate.getDay() + 1 + numberOfDays) / 7)
-
-    return result;
   }
 
   private handleExceptions(error:any){

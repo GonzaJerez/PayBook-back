@@ -2,16 +2,6 @@ version: '3'
  
 services:
 
-  app_dev:
-    build: .
-    depends_on:
-      - db_dev
-    restart: always
-    ports:
-      - "${PORT}:${PORT}"
-    volumes:
-      - .:/home/app
-
   db_dev:
     image: postgres:14.3
     restart: always
@@ -22,9 +12,9 @@ services:
       POSTGRES_DB: ${DB_NAME}
       # Si no declaro nombre por defecto es "postgres"  
       POSTGRES_USER: ${DB_USERNAME}
-    container_name: gastos_app
+    # container_name: db
     volumes: 
-      - psql:/var/lib/postgresql/data
+      - psql_dev:/var/lib/postgresql/data
 
 volumes:
-  psql:
+  psql_dev:
