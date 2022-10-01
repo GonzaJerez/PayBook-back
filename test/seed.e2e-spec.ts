@@ -42,11 +42,11 @@ describe('SeedController (e2e)', () => {
   describe('executeSeed - /seed (GET)', () => {
 
     it('should return a Forbidden error when try to execute seed on non development environment', async () => {
-      process.env.STAGE = 'prod'
+      process.env.NODE_ENV = 'prod'
       await request(app.getHttpServer())
         .get(BASE_URL)
         .expect(403)
-      process.env.STAGE = 'dev'
+      process.env.NODE_ENV = 'dev'
     })
 
     it('should execute a seed', async () => {
@@ -83,11 +83,11 @@ describe('SeedController (e2e)', () => {
     })
 
     it('should return a Forbidden error when try to execute seed on non development environment', async () => {
-      process.env.STAGE = 'prod'
+      process.env.NODE_ENV = 'prod'
       await request(app.getHttpServer())
         .get(`${BASE_URL}${COMPLEMENT_URL}`)
         .expect(403)
-      process.env.STAGE = 'dev'
+      process.env.NODE_ENV = 'dev'
     })
 
     it('should clean DB', async () => {

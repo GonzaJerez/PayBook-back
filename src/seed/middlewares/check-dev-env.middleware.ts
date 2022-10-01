@@ -4,8 +4,8 @@ import { Request, Response, NextFunction } from 'express';
 
 export const CheckDevEnv = (_req: Request, _res: Response, next: NextFunction)=> {
 
-    if (process.env.STAGE !== 'dev')
-      throw new ForbiddenException(`Option only can be used in dev environment`)
+    if (process.env.NODE_ENV === 'prod')
+      throw new ForbiddenException(`Option only can be used in dev or test environment`)
 
     next();
 }

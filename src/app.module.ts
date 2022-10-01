@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
@@ -15,25 +15,25 @@ import { ExpensesModule } from './expenses/expenses.module';
   imports: [
     AuthModule,
     ConfigModule.forRoot({
-      envFilePath: process.env.NODE_ENV === 'production'
+      envFilePath: process.env.NODE_ENV === 'prod'
         ? '.env.prod'
-        : '.env'
+        : '.env.dev'
     }),
     TypeOrmModule.forRoot({
-      // ssl: process.env.STAGE === 'prod',
-      // extra: {
-      //   ssl: process.env.STAGE === 'prod'
-      //     ? { rejectUnauthorized: false }
-      //     : null
-      // },
+      ssl: process.env.NODE_ENV === 'prod',
+      extra: {
+        ssl: process.env.NODE_ENV === 'prod'
+          ? { rejectUnauthorized: false }
+          : null
+      },
       type: 'postgres',
       host: (process.env.NODE_ENV === 'test') ? 'localhost' : process.env.DB_HOST,
       port: +process.env.DB_PORT,
       database: process.env.DB_NAME,
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
-      autoLoadEntities: true,
-      synchronize: true
+      autoLoadEntities: process.env.NODE_ENV !== 'prod',
+      synchronize: process.env.NODE_ENV !== 'prod'
     }),
     CommonModule,
     AccountsModule,
@@ -49,7 +49,8 @@ import { ExpensesModule } from './expenses/expenses.module';
 })
 export class AppModule {
   constructor(){
-    // console.log({environment: process.env});
+    console.log({env: process.env.NODE_ENV});
+    console.log({host: process.env.DB_HOST});
     
   }
 }

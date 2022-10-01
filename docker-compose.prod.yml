@@ -9,26 +9,20 @@ services:
     depends_on:
       - db_prod
     restart: always
-    env_file:
-      - .env.prod
     ports:
       - "${PORT}:${PORT}"
     volumes:
       - .:/home/app
-    environment:
-      NODE_ENV: 'production'
 
   db_prod:
     image: postgres:14.3
     restart: always
     ports:
       - "5432:5432"
-    env_file:
-      - .env.prod
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-      # Si no declaro nombre por defecto es "postgres"  
+      # Si no declaro nombre por defecto es "postgres"
       POSTGRES_USER: ${DB_USERNAME}
     container_name: gastos_db_prod
     volumes: 

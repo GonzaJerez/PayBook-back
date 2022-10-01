@@ -37,26 +37,47 @@ $ npm run start:dev
 # 1. Install dependencies
 $ npm install
 
-# 2. Clone ".env.example" to create ".env" and complete environment variables
+# 2. Clone ".env.example" to ".env.dev" file and complete with development environments variables
 
 # 3. Build up DB
-$ docker compose up
+$ npm run docker:dev
 
-
-# 5. Ejecute seed
+# 4. Ejecute seed
 (GET) http://localhost:3000/api/seed
+```
+
+### Down container - Development
+
+```bash
+$ npm run docker:dev:down
 ```
 
 ## Running the production app - Production
 
+```bash
+# 1. Clone ".env.example" to ".env.prod" file and complete with production environments variables
 
+# 2. Build up DB
+$ npm run docker:prod
+```
 
+### Down container - Production
+
+```bash
+$ npm run docker:prod:down
+```
 ## Test
 
 ```bash
 # 1. Build up DB for testing
-$ docker compose up -d db_dev
+$ npm run docker:db
 
 # e2e tests watch mode
 $ npm run test:e2e:watch
+```
+
+### Down container - DB test
+
+```bash
+$ npm run docker:db:down
 ```
