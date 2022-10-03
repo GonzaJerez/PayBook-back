@@ -6,6 +6,7 @@ import {ValidUserToAccessAccount} from '../common/decorators/valid-user-to-acces
 import {GetUser} from '../auth/decorators/get-user.decorator';
 import {User} from '../users/entities/user.entity';
 import {FiltersExpensesDto} from './dto/filters-expenses.dto';
+import {PaginationDto} from '../common/dtos/pagination.dto';
 
 @Controller('accounts/:idAccount/expenses')
 @ValidUserToAccessAccount()
@@ -22,10 +23,18 @@ export class ExpensesController {
   }
 
   @Get()
-  findAllOnMonth(
+  findAll(
+    @Param('idAccount', ParseUUIDPipe) idAccount:string,
+    @Query() queryParameters:PaginationDto
+  ) {
+    return this.expensesService.findAll(idAccount, queryParameters);
+  }
+
+  @Get('statistics/main')
+  findPrincipalAmounts(
     @Param('idAccount', ParseUUIDPipe) idAccount:string,
   ) {
-    return this.expensesService.findAllOnMonth(idAccount);
+    return this.expensesService.findPrincipalAmounts(idAccount);
   }
 
   @Get('statistics')

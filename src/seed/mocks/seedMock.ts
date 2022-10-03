@@ -54,7 +54,7 @@ export const account3:CreateAccountDto = {
 
 // CATEGORIES
 export const category1: CreateCategoryDto ={
-    name: 'Categoria seed 1'
+    name: 'Gastos fijos'
 }
 
 export const category2: CreateCategoryDto ={
@@ -67,11 +67,11 @@ export const category3: CreateCategoryDto ={
 
 // SUBCATEGORIES
 export const subcategory1: CreateSubcategoryDto ={
-    name: 'Subcategoria seed 1'
+    name: 'Alquiler'
 }
 
 export const subcategory2: CreateSubcategoryDto ={
-    name: 'Subcategoria seed 2'
+    name: 'Seguro auto'
 }
 
 export const subcategory3: CreateSubcategoryDto ={

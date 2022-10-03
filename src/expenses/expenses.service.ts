@@ -13,6 +13,7 @@ import {Expense} from './entities/expense.entity';
 import {daysNames} from './utils/days-names';
 import {FiltersExpensesDto} from './dto/filters-expenses.dto';
 import {getNumberOfWeek} from '../common/helpers/getNumberOfWeek';
+import {PaginationDto} from 'src/common/dtos/pagination.dto';
 
 @Injectable()
 export class ExpensesService {
@@ -64,48 +65,84 @@ export class ExpensesService {
     }
   }
 
-  async findAllOnMonth(idAccount:string){
+  async findAll(idAccount:string, queryParameters:PaginationDto){
+
+    const {limit=5, skip=0} = queryParameters;
     const queryBuilder = this.expenseRepository.createQueryBuilder('expense')
+
+    try {
+      let [expenses, totalExpenses] = await queryBuilder.where({
+        account: idAccount,
+      })
+      .skip(skip)
+      .limit(limit)
+      .leftJoinAndSelect('expense.user','user')
+      .leftJoinAndSelect('expense.category','category')
+      .leftJoinAndSelect('expense.subcategory','subcategory')
+      .getManyAndCount()
+
+      return {
+        totalExpenses,
+        limit,
+        skip,
+        expenses,
+      }
+
+    } catch (error) {
+      this.handleExceptions(error)
+    }
+  }
+
+
+  async findPrincipalAmounts(idAccount:string){
+    const queryBuilder = this.expenseRepository.createQueryBuilder('expenses')
     
     const currentDate = new Date()
 
     try {
-      let expenses = await queryBuilder.where({
-        account: idAccount,
-        month: currentDate.getMonth() + 1,
-        year: currentDate.getFullYear()
-      })
-      .leftJoinAndSelect('expense.user','user')
-      .leftJoinAndSelect('expense.category','category')
-      .leftJoinAndSelect('expense.subcategory','subcategory')
-      .getMany()
-
-      let totalAmountOnMonth = 0;
-      let totalAmountOnWeek = 0;
-      let totalAmountOnDay = 0;
-
-      // TODO: Costos mensuales agregarlo como prop de cuenta
-      // let totalFixedCostsMonthly = 0;
-
-      const actualWeek = getNumberOfWeek()
       
-      expenses.forEach( expense =>{
-        
-        if(expense.week === actualWeek){
-          totalAmountOnWeek += expense.amount
-        }
-        if(expense.num_date === currentDate.getDate()){
-          totalAmountOnDay += expense.amount
-        }
+      const [totalAmountOnMonth,totalAmountOnWeek,totalAmountOnDay,totalAmountFixedCostsMonthly] = await Promise.all([
+        await queryBuilder
+          .select('SUM(expenses.amount)', 'totalAmountOnMonth')
+          .where({
+            account: idAccount,
+            month: currentDate.getMonth() + 1,
+            year: currentDate.getFullYear()
+          })
+          .getRawOne(),
+          await queryBuilder
+            .select('SUM(expenses.amount)', 'totalAmountOnWeek')
+            .where({
+              account: idAccount,
+              week: getNumberOfWeek(),
+              year: currentDate.getFullYear()
+            })
+            .getRawOne(),
+          await queryBuilder
+            .select('SUM(expenses.amount)', 'totalAmountOnDay')
+            .where({
+              account: idAccount,
+              num_date: currentDate.getDate(),
+              month: currentDate.getMonth() + 1,
+              year: currentDate.getFullYear()
+            })
+            .getRawOne(),
+          await queryBuilder
+          .select('SUM(expenses.amount)', 'totalAmountFixedCostsMonthly')
+          .leftJoin('expenses.category', 'cat')
+          .where(`expenses.accountId=:idAccount AND cat.name=:nameCategory`,{
+            idAccount,
+            nameCategory: 'Gastos fijos'
+          })
+          .getRawOne()
+      ])
 
-        totalAmountOnMonth += expense.amount
-      })
 
       return {
-        expenses,
-        totalAmountOnMonth,
-        totalAmountOnWeek,
-        totalAmountOnDay
+        ...totalAmountOnMonth,
+        ...totalAmountOnWeek,
+        ...totalAmountOnDay,
+        ...totalAmountFixedCostsMonthly
       }
 
     } catch (error) {
@@ -126,6 +163,8 @@ export class ExpensesService {
         .where(conditions,params)
         .getMany()
 
+      const expensesForMonthInLastYear = this.totalAmountsForMonthInLastYear(idAccount)
+
       const {
         totalAmount,
         totalAmountsForCategories,
@@ -137,6 +176,7 @@ export class ExpensesService {
         totalAmount,
         totalAmountsForCategories,
         totalAmountsForSubcategories,
+        expensesForMonthInLastYear
       };
 
     } catch (error) {
@@ -317,7 +357,7 @@ export class ExpensesService {
       month = currentDate.getMonth() + 1,
       max_amount,
       min_amount,
-      monthly,
+      // monthly,
       num_date,
       subcategories,
       users,
@@ -360,7 +400,7 @@ export class ExpensesService {
         ${(month !== 0) ? 'AND expense.month=:month' : ''}
         ${(max_amount) ? 'AND expense.amount<:max_amount' : ''}
         ${(min_amount) ? 'AND expense.amount>:min_amount' : ''}
-        ${(monthly) ? 'AND expense.monthly=:monthly' : ''}
+        
         ${(num_date) ? 'AND expense.num_date=:num_date' : ''}
         ${(subcategories) ? 'AND expense.subcategory IN (:...subcategories)' : ''}
         ${(users) ? 'AND expense.users IN (:...users)' : ''}
@@ -374,7 +414,7 @@ export class ExpensesService {
         month,
         max_amount,
         min_amount,
-        monthly,
+        // monthly,
         num_date,
         subcategories: (subcategories) && arraySubcategoriesIds,
         users: (users) && arrayUsersIds,
@@ -420,11 +460,25 @@ export class ExpensesService {
       
     })
 
+
     return {
       totalAmount,
       totalAmountsForCategories,
       totalAmountsForSubcategories
     }
+  }
+
+  private async totalAmountsForMonthInLastYear(idAccount:string){
+
+    const actualTime = Date.now()
+    const oneYearTime = 1000*60*60*24*365
+
+    return await this.expenseRepository.createQueryBuilder('expenses')
+      .select('expenses.month', 'month')
+      .addSelect('SUM(expenses.amount)', 'expenses')
+      .where(`expenses.accountId=:idAccount AND ${actualTime - oneYearTime} < expenses.complete_date`,{idAccount})
+      .groupBy('month')
+      .getRawMany()
   }
 
   private handleExceptions(error:any){

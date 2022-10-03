@@ -63,53 +63,6 @@ export class Expense {
     year: number;
 
     @ApiProperty({
-        type: String,
-        description: 'Name of the day when the expense was incured'
-    })
-    @Column('text')
-    day_name: string;
-
-    @ApiProperty({
-        type: Boolean,
-        description: 'Expense will be a monthly or not',
-        default: false
-    })
-    @Column('bool',{
-        default: false
-    })
-    monthly: boolean;
-
-    @ApiProperty({
-        type: Boolean,
-        description: 'Expense will be a yearly or not',
-        default: false
-    })
-    @Column('bool',{
-        default: false
-    })
-    yearly: boolean;
-
-    @ApiProperty({
-        type: Boolean,
-        description: 'The expense will be made forever or not',
-        default: false
-    })
-    @Column('bool',{
-        default:false
-    })
-    forever: boolean;
-
-    @ApiProperty({
-        type: Number,
-        description: 'Number of months to be spent',
-        default: 0
-    })
-    @Column('int',{
-        default:1
-    })
-    num_months: number;
-
-    @ApiProperty({
         type: Number,
         description: 'Number week of year',
     })
@@ -117,6 +70,74 @@ export class Expense {
         default:1
     })
     week: number;
+
+    @ApiProperty({
+        type: String,
+        description: 'Name of the day when the expense was incured'
+    })
+    @Column('text')
+    day_name: string;
+
+    @ApiProperty({
+        type: Number,
+        description: 'Number of installments payment',
+        default: 1
+    })
+    @Column('int',{
+        default: 1
+    })
+    installments: number;
+
+    @ApiProperty({
+        type: Number,
+        description: 'Number of installments paid',
+        default: 1
+    })
+    @Column('int',{
+        default: 1
+    })
+    installments_paid: number;
+
+    // @ApiProperty({
+    //     type: Boolean,
+    //     description: 'Expense will be a monthly or not',
+    //     default: false
+    // })
+    // @Column('bool',{
+    //     default: false
+    // })
+    // monthly: boolean;
+
+    // @ApiProperty({
+    //     type: Boolean,
+    //     description: 'Expense will be a yearly or not',
+    //     default: false
+    // })
+    // @Column('bool',{
+    //     default: false
+    // })
+    // yearly: boolean;
+
+    // @ApiProperty({
+    //     type: Boolean,
+    //     description: 'The expense will be made forever or not',
+    //     default: false
+    // })
+    // @Column('bool',{
+    //     default:false
+    // })
+    // forever: boolean;
+
+    // @ApiProperty({
+    //     type: Number,
+    //     description: 'Number of months to be spent',
+    //     default: 0
+    // })
+    // @Column('int',{
+    //     default:1
+    // })
+    // num_months: number;
+
 
     // @ApiProperty({
     //     type: ()=>Account,

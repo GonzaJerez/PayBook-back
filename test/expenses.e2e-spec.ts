@@ -209,7 +209,90 @@ describe('ExpensesController (e2e)', () => {
 
     })
 
-    describe('findAllOnMonth - /accounts/{:idAccount}/expenses (POST)', () => {
+    describe('findAll - /accounts/{:idAccount}/expenses (POST)', () => {
+
+        it('should return all expenses in account with pagination', async () => {
+            const DEFAULT_LIMIT = 5;
+            const DEFAULT_SKIP = 0;
+            await request(app.getHttpServer())
+                .get(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}`)
+                .auth(userTest1.token, {type: 'bearer'})
+                .expect(200)
+                .then(res =>{
+                    expect(res.body.limit).toBe(DEFAULT_LIMIT)
+                    expect(res.body.skip).toBe(DEFAULT_SKIP)
+                    expect(typeof res.body.totalExpenses).toBe('number')
+                    expect(res.body.expenses.length).toBeLessThanOrEqual(DEFAULT_LIMIT)
+                })
+        })
+
+        it('should return all expenses in account with custom pagination', async () => {
+            const LIMIT = 2;
+            const SKIP = 1;
+
+            await request(app.getHttpServer())
+                .get(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}?limit=${LIMIT}&skip=${SKIP}`)
+                .auth(userTest1.token, {type: 'bearer'})
+                .expect(200)
+                .then(res =>{
+                    expect(res.body.limit).toBe(LIMIT)
+                    expect(res.body.skip).toBe(SKIP)
+                    expect(typeof res.body.totalExpenses).toBe('number')
+                    expect(res.body.expenses.length).toBeLessThanOrEqual(LIMIT)
+                })
+        })
+
+        it('should return a Notfound error when account doesnt exist', async () => {
+            await request(app.getHttpServer())
+                .get(`${BASE_URL}/${fakeUUID}${COMPLEMENT_URL}`)
+                .auth(userTest1.token, {type: 'bearer'})
+                .expect(404)
+        })
+
+        it('should return a Notfound error when accountId is not a valid uuid', async () => {
+            await request(app.getHttpServer())
+                .get(`${BASE_URL}/123456789${COMPLEMENT_URL}`)
+                .auth(userTest1.token, {type: 'bearer'})
+                .expect(404)
+        })
+
+        it('should return a Unauthorized error when user is not authenticated', async () => {
+            await request(app.getHttpServer())
+                .get(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}`)
+                .expect(401)
+        })
+
+        it('should return a NotFound error when user to not belong to account try to access', async () => {
+            await request(app.getHttpServer())
+                .get(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}`)
+                .auth(userTest2.token, {type: 'bearer'})
+                .expect(404)
+        })
+
+        it('should return a NotFound error when user try to access to deleted account',async()=>{
+
+          // Elimina cuenta primero
+          await request(app.getHttpServer())
+            .delete(`/accounts/${accountTest1.id}`)
+            .auth(userTest1.token,{type:'bearer'})
+
+          await request(app.getHttpServer())
+            .get(`${BASE_URL}/${accountTest1}${COMPLEMENT_URL}`)
+            .auth(userTest1.token,{type:'bearer'})
+            .expect(404)
+        })
+
+    })
+
+    describe('findPrincipalAmounts - /accounts/{:idAccount}/statistics/main (POST)', () => {
+
+        beforeAll(() => {
+            COMPLEMENT_URL = '/expenses/statistics/main'
+        })
+
+        afterAll(() => {
+            COMPLEMENT_URL = '/expenses'
+        })
 
         it('should return all expenses in account on actual month and amounts', async () => {
             await request(app.getHttpServer())
@@ -220,6 +303,7 @@ describe('ExpensesController (e2e)', () => {
                     expect(typeof res.body.totalAmountOnMonth).toBe('number')
                     expect(typeof res.body.totalAmountOnWeek).toBe('number')
                     expect(typeof res.body.totalAmountOnDay).toBe('number')
+                    expect(typeof res.body.totalAmountFixedCostsMonthly).toBe('number')
                 })
         })
 
@@ -286,6 +370,7 @@ describe('ExpensesController (e2e)', () => {
                     expect(typeof res.body.totalAmount).toBe('number')
                     expect(Object.keys(res.body.totalAmountsForCategories).length).toBeGreaterThanOrEqual(1)
                     expect(Object.keys(res.body.totalAmountsForSubcategories)).toHaveLength(0)
+                    expect(res.body).toHaveProperty('expensesForMonthInLastYear')
                     res.body.expenses.forEach((expense: Expense) => {
                         expect(expense.month).toBe(currentDate.getMonth() + 1)
                         expect(expense.year).toBe(currentDate.getFullYear())
@@ -307,10 +392,11 @@ describe('ExpensesController (e2e)', () => {
                     expect(typeof res.body.totalAmount).toBe('number')
                     expect(Object.keys(res.body.totalAmountsForCategories)).toHaveLength(0)
                     expect(Object.keys(res.body.totalAmountsForSubcategories).length).toBeGreaterThanOrEqual(1)
+                    expect(res.body).toHaveProperty('expensesForMonthInLastYear')
                     res.body.expenses.forEach((expense: Expense) => {
                         expect(expense.category.id).toBe(categoryTest1.id)
                         expect(expense.amount).toBeLessThan(MAX_AMOUNT)
-                        expect(expense.monthly).toBeFalsy()
+                        // expect(expense.monthly).toBeFalsy()
                         expect(expense.day_name).toBe(DAY_NAME)
                     })
                 })
@@ -326,6 +412,7 @@ describe('ExpensesController (e2e)', () => {
                     expect(res.body).toHaveProperty('totalAmount')
                     expect(Object.keys(res.body.totalAmountsForSubcategories).length).toBe(0)
                     expect(Object.keys(res.body.totalAmountsForCategories).length).toBeGreaterThanOrEqual(1)
+                    expect(res.body).toHaveProperty('expensesForMonthInLastYear')
                     res.body.expenses.forEach((expense: Expense) => {
                         expect([categoryTest1.id, categoryTest2.id].includes(expense.category.id)).toBeTruthy()
                     })
