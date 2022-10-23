@@ -56,7 +56,7 @@ export class CategoriesService {
       
       await this.categoryRepository.save(category)
       delete category.account?.categories
-      return category;
+      return {category};
 
     } catch (error) {
       this.handleExceptions(error)
@@ -68,9 +68,15 @@ export class CategoriesService {
     // Busca cuenta actual
     const account = await this.findActualAccount(idAccount)
     
-    const categories = account.categories.filter(cat => cat.isActive)
+    const categories = account.categories
+      .filter(cat => cat.isActive)
+      .sort((a,b)=>a.name.localeCompare(b.name))
+      .map(cat => ({
+        ...cat,
+        subcategories: cat.subcategories.filter( subcat => subcat.isActive)
+      }))
 
-    return categories
+    return {categories}
   }
 
   async findOne(id: string) {
@@ -109,7 +115,9 @@ export class CategoriesService {
     try {
       await this.categoryRepository.save(categoryUpdated)
 
-      return categoryUpdated;
+      return {
+        category: categoryUpdated
+      };
 
     } catch (error) {
       this.handleExceptions(error)
@@ -123,7 +131,7 @@ export class CategoriesService {
 
     try {
       await this.categoryRepository.save(category);
-      return category;
+      return {category};
 
     } catch (error) {
       this.handleExceptions(error)
@@ -143,7 +151,7 @@ export class CategoriesService {
     try {
       return await this.accountRepository.findOne({
         where: {id: idAccount},
-        // relations: {categories:true}
+        relations: {categories:true}
       })
 
     } catch (error) {

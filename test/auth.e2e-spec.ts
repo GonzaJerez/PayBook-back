@@ -62,11 +62,11 @@ describe('AuthController (e2e)', () => {
         .send(mockUser1ToLogin)
         .expect(200)
         .then(res => {
-          expect(res.body).toEqual({
-            id: userTest1.id,
+          expect(res.body.user).toMatchObject({
             email: userTest1.email,
-            token: expect.any(String)
+            id: userTest1.id
           })
+          expect(typeof res.body.token).toBe('string')
         })
     })
 
@@ -78,15 +78,6 @@ describe('AuthController (e2e)', () => {
           password: 'ABC'
         })
         .expect(400)
-        .then(res => {
-          expect(res.body).toEqual({
-            statusCode: 400,
-            message: [
-              expect.any(String)
-            ],
-            error: 'Bad Request'
-          })
-        })
     })
 
     it('should return an BadRequest error when email does not satisfy the requirements ', async () => {
@@ -113,13 +104,9 @@ describe('AuthController (e2e)', () => {
         .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send({
           email: mockUser1ToLogin.email,
-          password: 'Abc1234'
+          password: 'Abc12345'
         })
-        .expect(401, {
-          error: 'Unauthorized',
-          message: 'Credentials are not valid',
-          statusCode: 401
-        })
+        .expect(401)
     })
 
     it('should return an Unauthorized error user when credentials (email) are incorrect', async () => {
@@ -129,13 +116,33 @@ describe('AuthController (e2e)', () => {
           email: 'otro-test@gmail.com',
           password: mockUser1ToLogin.password
         })
-        .expect(401, {
-          error: 'Unauthorized',
-          message: 'Credentials are not valid',
-          statusCode: 401
-        })
+        .expect(401)
     })
 
   })
 
+  describe('checkToken - /auth/checkToken (GET)', () => { 
+    beforeAll(()=>{
+      COMPLEMENT_URL='/checkToken'
+    })
+    
+    it('should return a new token when token is valid', async()=>{
+      await request(app.getHttpServer())
+        .get(`${BASE_URL}${COMPLEMENT_URL}`)
+        .auth(userTest1.token, {type:'bearer'})
+        .expect(200)
+        .then(res =>{
+          expect(res.body.user.id).toBe(userTest1.id)
+          expect(typeof res.body.token).toBe('string')
+        })
+    })
+
+    it('should return a Unauthorized error when token is invalid', async()=>{
+      await request(app.getHttpServer())
+      .get(`${BASE_URL}${COMPLEMENT_URL}`)
+      .auth('123456789', {type:'bearer'})
+      .expect(401)
+    })
+  })
+  
 });

@@ -25,11 +25,11 @@ export class AccountsController {
   }
 
   @Get()
-  @Auth(ValidRoles.ADMIN)
+  @Auth()
   findAll(
-    @Query() queryParameters: PaginationDto
+    @GetUser() user: User
   ) {
-    return this.accountsService.findAll(queryParameters);
+    return this.accountsService.findAll(user);
   }
 
   @Get(':id')

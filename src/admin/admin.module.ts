@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
@@ -11,8 +10,6 @@ import { UsersModule } from '../users/users.module';
   providers: [AdminService],
   imports: [
     AuthModule,
-    ConfigModule,
-    UsersModule
   ]
 })
 export class AdminModule {}

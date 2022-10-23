@@ -1,10 +1,11 @@
-import {IsBoolean, IsNumber, IsOptional, IsPositive, IsString, IsUUID, Length, Min} from "class-validator";
+import {Type} from "class-transformer";
+import {IsNumber, IsOptional, IsPositive, IsString, IsUUID, Length, Min} from "class-validator";
 
 export class CreateExpenseDto {
     
-    @IsNumber({maxDecimalPlaces:2})
     @IsPositive()
     @Min(1)
+    @Type(()=>Number)
     amount: number;
 
     @IsNumber()
@@ -16,22 +17,15 @@ export class CreateExpenseDto {
     @Length(0, 50)
     description?: string;
 
-    @IsBoolean()
-    @IsOptional()
-    monthly?: boolean;
-
-    @IsBoolean()
-    @IsOptional()
-    yearly?: boolean;
-
-    @IsBoolean()
-    @IsOptional()
-    forever?: boolean;
-
-    @IsNumber()
-    @IsOptional()
+    @IsPositive()
     @Min(1)
-    num_months?: number;
+    @Type(()=>Number)
+    installments: number;
+
+    @IsString()
+    @IsOptional()
+    @Length(0, 30)
+    name_credit_payment?: string;
 
     @IsUUID()
     categoryId: string;

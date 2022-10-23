@@ -13,6 +13,7 @@ import {Subcategory} from '../subcategories/entities/subcategory.entity';
 import {Expense} from '../expenses/entities/expense.entity';
 import {daysNames} from '../expenses/utils/days-names';
 import {getNumberOfWeek} from '../common/helpers/getNumberOfWeek';
+import {CreditPayment} from '../credit_payments/entities/credit_payment.entity';
 
 @Injectable()
 export class SeedService {
@@ -30,6 +31,8 @@ export class SeedService {
     private readonly subcategoryRepository:Repository<Subcategory>,
     @InjectRepository(Expense)
     private readonly expenseRepository:Repository<Expense>,
+    @InjectRepository(CreditPayment)
+    private readonly creditPaymentsRepository:Repository<CreditPayment>,
     private readonly jwtService:JwtService
   ){}
 
@@ -73,6 +76,7 @@ export class SeedService {
     try {
       // Limpiar DB
       await this.expenseRepository.delete({})
+      await this.creditPaymentsRepository.delete({})
       await this.subcategoryRepository.delete({})
       await this.categoryRepository.delete({})
       await this.accountRepository.delete({})
@@ -215,7 +219,7 @@ export class SeedService {
     const month = currentDate.getMonth() + 1
     const num_date = currentDate.getDate()
     const year = currentDate.getFullYear()
-    const day_name = daysNames[currentDate.getDay() - 1]
+    const day_name = daysNames[currentDate.getDay()]
     const week = getNumberOfWeek()
 
     const mocksExpenses = [

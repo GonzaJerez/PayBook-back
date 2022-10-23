@@ -7,11 +7,11 @@ export class LoginUserDto {
     email:      string;
 
     @IsString()
-    @MinLength(1)
+    @MinLength(8)
     @MaxLength(50)
     @Matches(
         /(?:(?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
-        message: 'The password must have a Uppercase, lowercase letter and a number'
+        message: 'La contraseña debe tener por lo menos una mayúscula, una minúscula, una letra y un número'
     })
     password:   string;
 

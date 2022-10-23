@@ -2,6 +2,7 @@ import {ApiProperty} from "@nestjs/swagger";
 import {Category} from "../../categories/entities/category.entity";
 import {Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn} from "typeorm";
 import {Expense} from "../../expenses/entities/expense.entity";
+import {CreditPayment} from "../../credit_payments/entities/credit_payment.entity";
 
 @Entity('subcategories')
 export class Subcategory{
@@ -50,4 +51,15 @@ export class Subcategory{
         // {cascade:true}
     )
     expenses?: Expense[];
+
+    @ApiProperty({
+        type: [CreditPayment],
+        description: 'Credit payment on this subcategory'
+    })
+    @OneToMany(
+        ()=> CreditPayment,
+        credit_payment => credit_payment.subcategory,
+        // {cascade:true}
+    )
+    credit_payments?: CreditPayment[];
 }

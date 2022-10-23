@@ -3,6 +3,7 @@ import {Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn} from "type
 import {Account} from "../../accounts/entities/account.entity";
 import {Subcategory} from "../../subcategories/entities/subcategory.entity";
 import {Expense} from "../../expenses/entities/expense.entity";
+import {CreditPayment} from "../../credit_payments/entities/credit_payment.entity";
 
 @Entity('categories')
 export class Category {
@@ -62,4 +63,15 @@ export class Category {
         // {cascade:true}
     )
     expenses?: Expense[];
+
+    @ApiProperty({
+        type: [CreditPayment],
+        description: 'Credit payment on this category'
+    })
+    @OneToMany(
+        ()=> CreditPayment,
+        credit_payment => credit_payment.category,
+        // {cascade:true}
+    )
+    credit_payments?: CreditPayment[];
 }

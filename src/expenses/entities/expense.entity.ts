@@ -1,4 +1,5 @@
 import {ApiProperty} from "@nestjs/swagger";
+import {CreditPayment} from "../../credit_payments/entities/credit_payment.entity";
 import {Column, Entity, ManyToOne, PrimaryGeneratedColumn} from "typeorm";
 
 import {Account} from "../../accounts/entities/account.entity";
@@ -78,71 +79,26 @@ export class Expense {
     @Column('text')
     day_name: string;
 
-    @ApiProperty({
-        type: Number,
-        description: 'Number of installments payment',
-        default: 1
-    })
-    @Column('int',{
-        default: 1
-    })
-    installments: number;
-
-    @ApiProperty({
-        type: Number,
-        description: 'Number of installments paid',
-        default: 1
-    })
-    @Column('int',{
-        default: 1
-    })
-    installments_paid: number;
-
     // @ApiProperty({
-    //     type: Boolean,
-    //     description: 'Expense will be a monthly or not',
-    //     default: false
+    //     type: Number,
+    //     description: 'Number of installments payment',
+    //     default: 1
     // })
-    // @Column('bool',{
-    //     default: false
+    // @Column('int',{
+    //     default: 1
     // })
-    // monthly: boolean;
-
-    // @ApiProperty({
-    //     type: Boolean,
-    //     description: 'Expense will be a yearly or not',
-    //     default: false
-    // })
-    // @Column('bool',{
-    //     default: false
-    // })
-    // yearly: boolean;
-
-    // @ApiProperty({
-    //     type: Boolean,
-    //     description: 'The expense will be made forever or not',
-    //     default: false
-    // })
-    // @Column('bool',{
-    //     default:false
-    // })
-    // forever: boolean;
+    // installments: number;
 
     // @ApiProperty({
     //     type: Number,
-    //     description: 'Number of months to be spent',
-    //     default: 0
+    //     description: 'Number of installments paid',
+    //     default: 1
     // })
     // @Column('int',{
-    //     default:1
+    //     default: 1
     // })
-    // num_months: number;
+    // installments_paid: number;
 
-
-    // @ApiProperty({
-    //     type: ()=>Account,
-    //     description: 'Account that made the expense',
-    // })
     @ManyToOne(
         ()=> Account,
         account => account.expenses,
@@ -150,10 +106,6 @@ export class Expense {
     )
     account: Account;
 
-    // @ApiProperty({
-    //     type: User,
-    //     description: 'User that made the expense',
-    // })
     @ManyToOne(
         ()=>User,
         user => user.expenses,
@@ -161,10 +113,6 @@ export class Expense {
     )
     user: User;
 
-    // @ApiProperty({
-    //     type: Category,
-    //     description: 'Category to which the expense belongs',
-    // })
     @ManyToOne(
         ()=>Category,
         category => category.expenses,
@@ -172,14 +120,17 @@ export class Expense {
     )
     category: Category;
 
-    // @ApiProperty({
-    //     type: Subcategory,
-    //     description: 'Subcategory to which the expense belongs',
-    // })
     @ManyToOne(
         ()=>Subcategory,
         subcategory => subcategory.expenses,
         {eager:true}
     )
     subcategory: Subcategory;
+
+    @ManyToOne(
+        ()=>CreditPayment,
+        credit_payment => credit_payment.expenses,
+        {nullable: true}
+    )
+    credit_payment: CreditPayment;
 }

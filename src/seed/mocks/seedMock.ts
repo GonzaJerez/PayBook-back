@@ -1,12 +1,11 @@
 import * as bcrypt from 'bcrypt'
-import {CreateExpenseDto} from 'src/expenses/dto/create-expense.dto'
-import {Expense} from 'src/expenses/entities/expense.entity'
+
 import {CreateSubcategoryDto} from 'src/subcategories/dto/create-subcategory.dto'
 import {CreateAccountDto} from '../../accounts/dto/create-account.dto'
 import {CreateCategoryDto} from '../../categories/dto/create-category.dto'
 import {CreateUserDto} from "../../users/dtos/create-user.dto"
 
-export const PASSWORD_TEST = 'Abc123'
+export const PASSWORD_TEST = 'Abcd1234'
 
 // ADMIN
 export const adminTest:CreateUserDto = {

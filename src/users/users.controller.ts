@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiOkResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import {LoginGoogleDto} from '../auth/dto/login-google.dto';
 
-import { AuthController } from '../auth/auth.controller';
-import { AuthService } from '../auth/auth.service';
+
 import { Auth } from '../auth/decorators/auth.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { ValidRoles } from '../auth/interfaces';
@@ -13,13 +13,18 @@ import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 
 @Controller('users')
-export class UsersController extends AuthController {
+export class UsersController  {
 
   constructor(
     private readonly usersService: UsersService,
-    authService: AuthService
-  ) {
-    super(authService)
+  ) {}
+
+  @HttpCode(200)
+  @Post('google')
+  // @ApiOkResponse({description:'User was loged', type:User})
+  // @ApiBadRequestResponse({description:'Bad request'})
+  googleSignIn(@Body() loginGoogleDto:LoginGoogleDto){
+    return this.usersService.googleSignIn(loginGoogleDto)
   }
 
   @Post('register')
@@ -27,7 +32,7 @@ export class UsersController extends AuthController {
   @ApiBadRequestResponse({status:400,description:'Bad request'})
   @ApiForbiddenResponse({description:'Forbidden - Only can exist one admin'})
   create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+    return this.usersService.register(createUserDto);
   }
 
   @Get()

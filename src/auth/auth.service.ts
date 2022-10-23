@@ -1,54 +1,100 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
+import {ForbiddenException, Injectable, InternalServerErrorException, Logger, UnauthorizedException} from '@nestjs/common';
+import {InjectRepository} from '@nestjs/typeorm';
+import {JwtService} from '@nestjs/jwt';
+import {Repository} from 'typeorm';
 import * as bcrypt from 'bcrypt'
 
-import { LoginUserDto } from './dto/login-user.dto';
-import { User } from '../users/entities/user.entity';
-import { JwtPayload } from './interfaces/jwt-payload.interface';
+import {LoginUserDto} from './dto/login-user.dto';
+import {User} from '../users/entities/user.entity';
+import {JwtPayload} from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
-  
+
   logger = new Logger('AuthService')
 
   constructor(
     @InjectRepository(User)
-    public userRepository:Repository<User>,
-    public jwtService:JwtService,
-  ){}
+    public userRepository: Repository<User>,
+    public jwtService: JwtService,
+  ) {}
 
-  async login(loginUserDto:LoginUserDto){
-    const {email,password} = loginUserDto;
+  async login(loginUserDto: LoginUserDto) {
+    const {email, password} = loginUserDto;
 
     try {
       // Para poder recuperar la password que por defecto no viene en la entity
       const user = await this.userRepository.findOne({
-        where: {email},
-        select: {email:true, password:true, id:true}
+        where: {email: email.toLocaleLowerCase()},
+        select: {email: true, password: true, id: true, isActive: true, fullName: true, roles: true, google:true},
+        relations: {accounts: true}
       })
-      
-      if (!user || !bcrypt.compareSync(password, user.password))
-        throw new UnauthorizedException('Credentials are not valid')
-  
+
+      if(!user)
+        this.handleExceptions({
+          status: 401,
+          message: `No existe usuario registrado con el email ${email}`
+        })
+
+      if (!user?.isActive)
+        this.handleExceptions({
+          status: 403,
+          message: 'Usuario eliminado. Contactese con soporte'
+        })
+
+      if (user?.google)
+        this.handleExceptions({
+          status: 401,
+          message: 'Usuario registrado con google'
+        })
+
+      if (!bcrypt.compareSync(password, user.password))
+        this.handleExceptions({
+          status: 401,
+          message: 'Credenciales no válidas'
+        })
+
+
       delete user.password;
       delete user.accounts;
-  
+
       return {
-        ...user,
+        user,
         token: this.generateToken({id: user.id})
       }
     } catch (error) {
-      if(error.status === 401) throw new UnauthorizedException(error.message)
-      
-      this.logger.error(error);
-      throw new InternalServerErrorException('Contact to admin')
+      this.handleExceptions(error)
     }
   }
 
-  generateToken(payload:JwtPayload){
+  
+
+  async checkToken(user: User) {
+    return {
+      user,
+      token: this.generateToken({id: user.id})
+    }
+  }
+
+  generateToken(payload: JwtPayload) {
     return this.jwtService.sign(payload)
+  }
+
+  
+
+  handleExceptions(error: any) {
+
+    if (error.status === 401) {
+      throw new UnauthorizedException(error.message)
+    }
+
+    if (error.status === 403) {
+      throw new ForbiddenException(error.message)
+    }
+
+    this.logger.error(error);
+
+    throw new InternalServerErrorException('Mensaje de error')
   }
 
 }

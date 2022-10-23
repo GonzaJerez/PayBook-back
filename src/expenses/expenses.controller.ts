@@ -7,6 +7,7 @@ import {GetUser} from '../auth/decorators/get-user.decorator';
 import {User} from '../users/entities/user.entity';
 import {FiltersExpensesDto} from './dto/filters-expenses.dto';
 import {PaginationDto} from '../common/dtos/pagination.dto';
+import {PayInstallmentDto} from './dto/pay-installment.dto';
 
 @Controller('accounts/:idAccount/expenses')
 @ValidUserToAccessAccount()
@@ -70,5 +71,13 @@ export class ExpensesController {
     @GetUser('id') userId:string
   ) {
     return this.expensesService.remove(id, idAccount, userId);
+  }
+
+  @Post('payInstallment/:idCreditPayment')
+  payInstallment( 
+    @Param('idCreditPayment') idCreditPayment:string,
+    @Body() payInstallmentDto: PayInstallmentDto
+  ){
+    return this.expensesService.payInstallment(idCreditPayment, payInstallmentDto)
   }
 }

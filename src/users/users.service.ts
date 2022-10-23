@@ -1,85 +1,95 @@
-import {BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException} from '@nestjs/common';
-import {JwtService} from '@nestjs/jwt';
+import {BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnauthorizedException} from '@nestjs/common';
+import {InjectRepository} from '@nestjs/typeorm';
+import {Repository} from 'typeorm';
 import * as bcrypt from 'bcrypt'
 
 import {AuthService} from '../auth/auth.service';
 import {ValidRoles} from '../auth/interfaces';
 import {PaginationDto} from '../common/dtos/pagination.dto';
-import {Repository} from 'typeorm';
 import {CreateUserDto} from './dtos/create-user.dto';
 import {UpdateUserDto} from './dtos/update-user.dto';
 import {User} from './entities/user.entity';
-import {InjectRepository} from '@nestjs/typeorm';
 import {Account} from '../accounts/entities/account.entity';
-import {generateAccountAccessKey} from '../common/helpers/generateAccountAccessKey';
-import {defaultAccount} from '../accounts/data/default-account';
 import {Category} from '../categories/entities/category.entity';
-import {defaultCategories} from '../categories/data/default-categories';
 import {Subcategory} from '../subcategories/entities/subcategory.entity';
+import {LoginGoogleDto} from '../auth/dto/login-google.dto';
+import {defaultAccount} from '../accounts/data/default-account';
+import {generateAccountAccessKey} from '../common/helpers/generateAccountAccessKey';
+import {defaultCategories} from '../categories/data/default-categories';
+import {PASSWORD_TEST} from '../seed/mocks/seedMock';
+import axios, {Axios} from 'axios';
 
 @Injectable()
-export class UsersService extends AuthService {
+export class UsersService {
+
+  private readonly logger = new Logger()
+  private readonly axios:Axios = axios
 
   constructor(
-    userRepository: Repository<User>,
-    jwtService: JwtService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly authService: AuthService,
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Subcategory)
     private readonly subcategoryRepository: Repository<Subcategory>,
-  ) {
-    super(userRepository, jwtService)
-  }
+  ) {}
 
-  async create(createAuthDto: CreateUserDto) {
-
-    const {password, ...rest} = createAuthDto;
+  async googleSignIn(loginGoogleDto: LoginGoogleDto) {
+    const {tokenGoogle} = loginGoogleDto;
 
     try {
-      // Creo user
-      const user = this.userRepository.create({
-        ...rest,
-        password: bcrypt.hashSync(password, 10),
-      });
+      const {name, email} = await this.googleVerify(tokenGoogle)
+      const dataToCreateUser: CreateUserDto = {
+        fullName: name,
+        email,
+        password: PASSWORD_TEST,
+      }
 
-      // Creo cuenta por defecto para el usuario creado
-      const account = this.accountRepository.create({
-        ...defaultAccount,
-        access_key: generateAccountAccessKey(),
-        // Creo categorias por defecto para la cuenta creada
-        categories: this.categoryRepository.create(
-          defaultCategories.map(cat => ({
-            name:cat.name,
-            // Creo subcategorias por defecto para cada categoria creada
-            subcategories: this.subcategoryRepository.create(
-              cat.subcategories.map( subcat => ({
-                name: subcat
-              }))
-            )
-          }))
-        )
-      });
+      let user = await this.userRepository.findOneBy({email})
 
-      user.accounts = [account]
-      user.accounts_admin = [account]
-      user.accounts_owner = [account]
+      if (user && !user.google)
+        this.handleExceptions({
+          status: 401,
+          message: 'El usuario ya se encuentra registrado con el email'
+        })
 
-      await this.userRepository.save(user)
-      
-      delete user.password;
-      delete user.accounts_admin
-      delete user.accounts_owner
+      if (user && !user.isActive)
+        this.handleExceptions({
+          status: 403,
+          message: 'Usuario eliminado. Contactese con soporte'
+        })
+
+      if (!user) {
+        user = await this.createNewUser(dataToCreateUser, {google: true})
+      }
 
       return {
-        ...user,
-        token: this.generateToken({id: user.id})
-      };
-
+        user,
+        token: this.authService.generateToken({id: user.id})
+      }
     } catch (error) {
-      this.handleExceptions(error);
+      this.handleExceptions(error)
     }
+  }
+
+  async register(createUserDto: CreateUserDto) {
+
+    const {password, email, ...rest} = createUserDto;
+
+    const existUserWithSameEmail = await this.findUserByEmail(email)
+
+    if (existUserWithSameEmail)
+      throw new BadRequestException(`Ya se encuentra registrado un usuario con el email "${email}"`);
+
+    const user = await this.createNewUser(createUserDto, {google: false})
+    
+    return {
+      user,
+      token: this.authService.generateToken({id: user.id})
+    };
   }
 
   async findAll(queryParameters: PaginationDto) {
@@ -113,7 +123,7 @@ export class UsersService extends AuthService {
       })
 
       if (!user) this.handleExceptions({
-        ok: false,
+        status: 404,
         message: `User with id ${id} not found`
       });
 
@@ -145,23 +155,50 @@ export class UsersService extends AuthService {
   async update(id: string, updateUserDto: UpdateUserDto, user: User) {
 
     this.isAuthUser(user, id);
+    const {email, password, newPassword, ...rest} = updateUserDto;
 
     try {
-      const userUpdated = await this.userRepository.preload({
-        id,
-        ...updateUserDto,
+      const userToUpdate = await this.userRepository.findOne({
+        where: {id},
+        select: {fullName: true, email: true, id: true, password: true, isActive: true, roles: true},
+        relations: {accounts: true}
       })
 
-      if (!userUpdated) this.handleExceptions({
-        ok: false,
+      // si user no existe
+      if (!userToUpdate) this.handleExceptions({
+        status: 404,
         message: `User with id ${id} not found`
       });
+
+      // si actualiza email
+      if (email) {
+        userToUpdate.email = email.toLowerCase()
+      }
+
+      // si actualiza password
+      if (password) {
+        // Si la contraseña actual es incorrecta y no actualiza el admin
+        if (!bcrypt.compareSync(password, userToUpdate.password) && !user.roles.includes(ValidRoles.ADMIN)) {
+          return this.handleExceptions({
+            status: 400,
+            message: 'Contraseña actual incorrecta'
+          })
+        }
+        // Si es correcta actualiza
+        else {
+          userToUpdate.password = bcrypt.hashSync(newPassword, 10)
+        }
+      }
+
+      const userUpdated = {
+        ...userToUpdate,
+        ...rest
+      }
 
       await this.userRepository.save(userUpdated)
 
       return {
-        ...userUpdated,
-        // accounts: user.accounts
+        user: userUpdated,
       }
 
     } catch (error) {
@@ -202,7 +239,83 @@ export class UsersService extends AuthService {
    */
   private isAuthUser(userAuth: User, userModifiedId: string) {
     if (userAuth.id !== userModifiedId && !userAuth.roles.includes(ValidRoles.ADMIN)) {
-      throw new ForbiddenException(`You don't have permission to perform this action`)
+      this.handleExceptions({
+        status: 403,
+        message: `You don't have permission to perform this action`
+      })
+    }
+  }
+
+
+  async createNewUser(body: CreateUserDto, {google}: {google: boolean}) {
+    try {
+      // Creo user
+      const user = this.userRepository.create({
+        ...body,
+        password: bcrypt.hashSync(body.password, 10),
+        email: body.email.toLocaleLowerCase(),
+        google: google
+      });
+
+      // Creo cuenta por defecto para el usuario creado
+      const account = this.accountRepository.create({
+        ...defaultAccount,
+        access_key: generateAccountAccessKey(),
+        // Creo categorias por defecto para la cuenta creada
+        categories: this.categoryRepository.create(
+          defaultCategories.map(cat => ({
+            name: cat.name,
+            // Creo subcategorias por defecto para cada categoria creada
+            subcategories: this.subcategoryRepository.create(
+              cat.subcategories.map(subcat => ({
+                name: subcat
+              }))
+            )
+          }))
+        )
+      });
+
+      user.accounts = [account]
+      user.accounts_admin = [account]
+      user.accounts_owner = [account]
+
+      await this.userRepository.save(user)
+
+      delete user.password;
+      delete user.accounts;
+      delete user.accounts_admin
+      delete user.accounts_owner
+      
+      return user;
+
+    } catch (error) {
+      this.handleExceptions(error)
+    }
+  }
+
+  async findUserByEmail(email: string) {
+    try {
+      const user = await this.userRepository.findOneBy({email})
+      return user;
+    } catch (error) {
+      this.handleExceptions(error)
+    }
+  }
+
+  async googleVerify(token = ''){
+    try {
+      const userInfo = await this.axios.get('https://www.googleapis.com/userinfo/v2/me', {
+        headers: {Authorization: `Bearer ${token}`}
+      })
+  
+      const {name, email} = userInfo.data;
+  
+      return {
+        name,
+        email,
+      }
+    } catch (error) {
+      throw new UnauthorizedException('Token google inválido')
     }
   }
 
@@ -212,20 +325,30 @@ export class UsersService extends AuthService {
       throw new BadRequestException(error.detail);
     }
 
-    if (error.message === 'Already exist an Admin') {
+    if (error.status === 400) {
+      throw new BadRequestException(error.message)
+    }
+
+    if (error.status === 401) {
+      throw new UnauthorizedException(error.message)
+    }
+
+    if (error.status === 403) {
       throw new ForbiddenException(error.message)
     }
 
-    if (error.message.startsWith('User with id ')) {
+    if (error.status === 404) {
       throw new NotFoundException(error.message)
     }
 
-    if (error.message === 'Credentials are not valid') {
+    if (error.status === 401) {
       throw new UnauthorizedException(error.message)
     }
 
     this.logger.error(error);
+    console.log(error);
+    
 
-    throw new InternalServerErrorException('Mensaje de error')
+    throw new InternalServerErrorException(error)
   }
 }

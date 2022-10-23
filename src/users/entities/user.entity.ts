@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {CreditPayment} from '../../credit_payments/entities/credit_payment.entity';
 import {Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn} from 'typeorm'
 
 import { Account } from '../../accounts/entities/account.entity';
@@ -51,6 +52,16 @@ export class User {
         default: true
     })
     isActive:   boolean;
+
+    @ApiProperty({
+        type: 'boolean',
+        default: false,
+        description: 'Prop to identifier if user sign up with google',
+    })
+    @Column('bool',{
+        default: false
+    })
+    google:   boolean;
     
     @ApiProperty({
         example: ['admin','user'],
@@ -93,4 +104,15 @@ export class User {
         // {cascade:true}
     )
     expenses?: Expense[];
+
+    @ApiProperty({
+        type: [CreditPayment],
+        description: 'Credit payment by this user'
+    })
+    @OneToMany(
+        ()=> CreditPayment,
+        credit_payment => credit_payment.user,
+        // {cascade:true}
+    )
+    credit_payments?: CreditPayment[];
 }

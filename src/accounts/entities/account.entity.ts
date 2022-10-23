@@ -4,6 +4,7 @@ import { Column, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColum
 import { User } from "../../users/entities/user.entity";
 import {Category} from "../../categories/entities/category.entity";
 import {Expense} from "../../expenses/entities/expense.entity";
+import {CreditPayment} from "../../credit_payments/entities/credit_payment.entity";
 
 @Entity('accounts')
 export class Account {
@@ -67,7 +68,7 @@ export class Account {
     @ManyToMany(
         ()=> User,
         user => user.accounts,
-        {onDelete: 'CASCADE'}
+        {onDelete: 'CASCADE', eager: true}
     )
     users: User[];
 
@@ -76,7 +77,8 @@ export class Account {
     })
     @ManyToOne(
         ()=> User,
-        user => user.accounts_owner
+        user => user.accounts_owner,
+        {eager: true}
     )
     creator_user: User;
 
@@ -85,7 +87,8 @@ export class Account {
     })
     @ManyToOne(
         ()=> User,
-        user => user.accounts_admin
+        user => user.accounts_admin,
+        {eager: true}
     )
     admin_user: User;
 
@@ -96,7 +99,7 @@ export class Account {
     @OneToMany(
         ()=> Category,
         categories => categories.account,
-        {cascade:true,eager:true}
+        {cascade:true}
     )
     categories?: Category[];
 
@@ -110,4 +113,15 @@ export class Account {
         {cascade:true}
     )
     expenses?: Expense[];
+
+    @ApiProperty({
+        type: ()=> [CreditPayment],
+        description: 'Credit payments in this account'
+    })
+    @OneToMany(
+        ()=> CreditPayment,
+        credit_payment => credit_payment.account,
+        {cascade:true}
+    )
+    credit_payments?: CreditPayment[];
 }

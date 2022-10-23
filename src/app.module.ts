@@ -10,6 +10,8 @@ import { SeedModule } from './seed/seed.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SubcategoriesModule } from './subcategories/subcategories.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { PaymentsModule } from './payments/payments.module';
+import { CreditPaymentsModule } from './credit_payments/credit_payments.module';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { ExpensesModule } from './expenses/expenses.module';
     CategoriesModule,
     SubcategoriesModule,
     ExpensesModule,
+    PaymentsModule,
+    CreditPaymentsModule,
   ],
   controllers: [],
   providers: [],
