@@ -284,7 +284,7 @@ describe('ExpensesController (e2e)', () => {
 
   })
 
-  describe.only('findPrincipalAmounts - /accounts/{:idAccount}/statistics/main (POST)', () => {
+  describe('findPrincipalAmounts - /accounts/{:idAccount}/statistics/main (POST)', () => {
 
     beforeAll(() => {
       COMPLEMENT_URL = '/expenses/statistics/main'
