@@ -57,7 +57,7 @@ export class CreditPayment {
   @OneToMany(
     () => Expense,
     expense => expense.credit_payment,
-    {eager: true}
+    {eager: true, cascade: true}
   )
   expenses: Expense[]
 

@@ -19,8 +19,9 @@ export class CreateExpenseDto {
 
     @IsPositive()
     @Min(1)
+    @IsOptional()
     @Type(()=>Number)
-    installments: number;
+    installments?: number;
 
     @IsString()
     @IsOptional()

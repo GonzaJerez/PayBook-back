@@ -79,26 +79,6 @@ export class Expense {
     @Column('text')
     day_name: string;
 
-    // @ApiProperty({
-    //     type: Number,
-    //     description: 'Number of installments payment',
-    //     default: 1
-    // })
-    // @Column('int',{
-    //     default: 1
-    // })
-    // installments: number;
-
-    // @ApiProperty({
-    //     type: Number,
-    //     description: 'Number of installments paid',
-    //     default: 1
-    // })
-    // @Column('int',{
-    //     default: 1
-    // })
-    // installments_paid: number;
-
     @ManyToOne(
         ()=> Account,
         account => account.expenses,
@@ -130,7 +110,7 @@ export class Expense {
     @ManyToOne(
         ()=>CreditPayment,
         credit_payment => credit_payment.expenses,
-        {nullable: true}
+        {nullable: true, onDelete: 'CASCADE'}
     )
     credit_payment: CreditPayment;
 }

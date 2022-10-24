@@ -6,6 +6,7 @@ import {CreateCreditPaymentDto} from './dto/create-credit_payment.dto';
 import {UpdateCreditPaymentDto} from './dto/update-credit_payment.dto';
 import {CreditPayment} from './entities/credit_payment.entity';
 import {User} from 'src/users/entities/user.entity';
+import {OnlyPendingDto} from './dto/only-pending.dto';
 
 @Injectable()
 export class CreditPaymentsService {
@@ -23,7 +24,7 @@ export class CreditPaymentsService {
     try {
       const credit_payment = this.creditPaymentRepository.create({
         ...createCreditPaymentDto,
-        name: createCreditPaymentDto.name || '',
+        name: createCreditPaymentDto.name || 'Sin nombre de referencia',
         installments_paid: 1,
       })
 
@@ -36,17 +37,26 @@ export class CreditPaymentsService {
     }
   }
 
-  async findAll(idAccount: string) {
+  async findAll(idAccount: string, onlyPendingDto:OnlyPendingDto) {
     try {
       const qb = this.creditPaymentRepository.createQueryBuilder('credit_payment')
       const credit_payments = await qb
         .where(
-          `credit_payment.accountId=:idAccount 
-          AND credit_payment.installments != credit_payment.installments_paid
-          AND credit_payment.isActive = true`,
+          `credit_payment.accountId=:idAccount
+          AND credit_payment.isActive = true
+          ${onlyPendingDto.pending 
+            ? 'AND credit_payment.installments != credit_payment.installments_paid'
+            : ''
+          }`,
           {idAccount}
         )
+        .leftJoinAndSelect('credit_payment.expenses', 'credit_payment_expenses')
+        .leftJoinAndSelect('credit_payment_expenses.category', 'credit_payment_expenses_category')
+        .leftJoinAndSelect('credit_payment_expenses.subcategory', 'credit_payment_expenses_subcategory')
+        .leftJoinAndSelect('credit_payment_expenses.user', 'credit_payment_expenses_user')
         .getMany()
+
+      // const creditPaymentsWithAmount = 
 
       return {credit_payments}
     } catch (error) {
@@ -112,13 +122,10 @@ export class CreditPaymentsService {
 
     this.isValidUserToModify(user.id, credit_payment, account)
 
-    credit_payment.isActive = false;
-
     try {
-      await this.creditPaymentRepository.save(credit_payment)
+      await this.creditPaymentRepository.remove(credit_payment)
       return {
         ok: true,
-        message: 'credit_payment deleted',
         credit_payment
       }
     } catch (error) {

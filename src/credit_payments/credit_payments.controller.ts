@@ -1,30 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, Query } from '@nestjs/common';
 import {GetUser} from '../auth/decorators/get-user.decorator';
 import {User} from '../users/entities/user.entity';
 import {ValidUserToAccessAccount} from '../common/decorators/valid-user-to-access-account.decorator';
 import { CreditPaymentsService } from './credit_payments.service';
 import { CreateCreditPaymentDto } from './dto/create-credit_payment.dto';
 import { UpdateCreditPaymentDto } from './dto/update-credit_payment.dto';
+import {OnlyPendingDto} from './dto/only-pending.dto';
 
 @Controller('accounts/:idAccount/credit-payments')
 @ValidUserToAccessAccount()
 export class CreditPaymentsController {
   constructor(private readonly creditPaymentsService: CreditPaymentsService) {}
 
-  // @Post()
-  // create(@Body() createCreditPaymentDto: CreateCreditPaymentDto) {
-  //   return this.creditPaymentsService.create(createCreditPaymentDto);
-  // }
-
   @Get()
-  findAll( @Param('idAccount', ParseUUIDPipe) idAccount:string) {
-    return this.creditPaymentsService.findAll(idAccount);
+  findAll( 
+    @Param('idAccount', ParseUUIDPipe) idAccount:string,
+    @Query() OnlyPendingDto:OnlyPendingDto
+  ) {
+    return this.creditPaymentsService.findAll(idAccount, OnlyPendingDto);
   }
-
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.creditPaymentsService.findOne(+id);
-  // }
 
   @Patch(':id')
   update(

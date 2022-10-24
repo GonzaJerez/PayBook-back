@@ -59,7 +59,7 @@ export class ExpensesService {
         week: getNumberOfWeek(),
       })
 
-      if (createExpenseDto.installments > 1) {
+      if (createExpenseDto.installments && createExpenseDto.installments > 1) {
         const credit_payment = await this.creditPaymentsService.create({
           account,
           category,
@@ -98,6 +98,7 @@ export class ExpensesService {
         .leftJoinAndSelect('expense.user', 'user')
         .leftJoinAndSelect('expense.category', 'category')
         .leftJoinAndSelect('expense.subcategory', 'subcategory')
+        .leftJoinAndSelect('expense.credit_payment', 'credit_payment')
         .orderBy('expense.complete_date', 'DESC')
         .getManyAndCount()
 
