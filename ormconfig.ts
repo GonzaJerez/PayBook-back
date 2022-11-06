@@ -16,7 +16,6 @@ export const AppDataSource = new DataSource({
       database: process.env.DB_NAME,
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
-      // autoLoadEntities: process.env.NODE_ENV !== 'prod',
       synchronize: process.env.NODE_ENV !== 'prod',
       entities: ["dist/**/*.entity{ .ts,.js}"],
       migrations: ["dist/**/migrations/*{.ts,.js}"],

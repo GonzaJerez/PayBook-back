@@ -28,4 +28,4 @@ COPY --from=deps /app/dist ./dist
 
 # COPY --from=deps /app/.env ./
 
-CMD [ "node","dist/main" ]
+CMD [ "node","dist/src/main" ]
