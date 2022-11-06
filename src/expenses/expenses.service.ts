@@ -182,10 +182,10 @@ export class ExpensesService {
     }
   }
 
-  async statistics(idAccount: string, queryParameters: FiltersExpensesDto) {
+  async statistics(idAccount: string, filters: FiltersExpensesDto) {
 
     const queryBuilder = this.expenseRepository.createQueryBuilder('expense')
-    const {conditions, params, accumulateBy} = this.filterExpenses(queryParameters, idAccount)
+    const {conditions, params, accumulateBy} = this.filterExpenses(filters, idAccount)
 
     try {
       let expenses = await queryBuilder
@@ -212,6 +212,8 @@ export class ExpensesService {
       };
 
     } catch (error) {
+      console.log(error);
+      
       this.handleExceptions(error)
     }
   }
@@ -435,39 +437,23 @@ export class ExpensesService {
     const {
       categories,
       day_name,
-      month = currentDate.getMonth() + 1,
+      month = [currentDate.getMonth() + 1],
       max_amount,
       min_amount,
       num_date,
       subcategories,
       users,
-      year = currentDate.getFullYear(),
-      yearly,
+      year = [currentDate.getFullYear()],
     } = filters;
 
     // No puede solicitarse subcategorias sin categoria
     if (subcategories && !categories)
-      throw new BadRequestException(`For choose subcategorie first choose categorie`)
+      throw new BadRequestException(`For choose subcategory first choose category`)
 
-    // Creo array de ids por cada query recibida
-    const arrayCategoriesIds = categories?.split(' ')
-    const arraySubcategoriesIds = subcategories?.split(' ')
-    const arrayUsersIds = users?.split(' ')
-
-    // Valido que cada array creado contenga uuid's
-    arrayCategoriesIds?.map(cat => {
-      if (!validateUUID(cat)) throw new BadRequestException(`some idCategory is not a valid uuid`)
-    })
-    arraySubcategoriesIds?.map(subcat => {
-      if (!validateUUID(subcat)) throw new BadRequestException(`some idSubcategory is not a valid uuid`)
-    })
-    arrayUsersIds?.map(user => {
-      if (!validateUUID(user)) throw new BadRequestException(`some isUser is not a valid uuid`)
-    })
 
     // Que valores son los que va a ir acumulando para sumar
     const accumulateBy: "subcategories" | "categories" =
-      ((categories && arrayCategoriesIds.length === 1) || subcategories)
+      ((categories && categories.length === 1) || subcategories)
         ? 'subcategories'
         : 'categories'
 
@@ -475,29 +461,27 @@ export class ExpensesService {
     return {
       conditions: `
         expense.account=:idAccount 
-        ${(categories) ? 'AND expense.category IN (:...categories)' : ''}
-        ${(day_name) ? 'AND expense.day_name=:day_name' : ''}
-        ${(month !== 0) ? 'AND expense.month=:month' : ''}
+        ${(categories && categories.length > 0) ? 'AND expense.category IN (:...categories)' : ''}
+        ${(day_name && day_name.length > 0) ? 'AND expense.day_name IN (:...day_name)' : ''}
+        ${(month.length > 0) ? 'AND expense.month IN (:...month)' : ''}
         ${(max_amount) ? 'AND expense.amount<:max_amount' : ''}
         ${(min_amount) ? 'AND expense.amount>:min_amount' : ''}
-        ${(num_date) ? 'AND expense.num_date=:num_date' : ''}
-        ${(subcategories) ? 'AND expense.subcategory IN (:...subcategories)' : ''}
-        ${(users) ? 'AND expense.users IN (:...users)' : ''}
-        ${(year !== 0) ? 'AND expense.year=:year' : ''}
-        ${(yearly) ? 'AND expense.yearly=:yearly' : ''}
+        ${(num_date && num_date.length > 0) ? 'AND expense.num_date IN (:...num_date)' : ''}
+        ${(subcategories && subcategories.length > 0) ? 'AND expense.subcategory IN (:...subcategories)' : ''}
+        ${(users && users.length > 0) ? 'AND expense.user IN (:...users)' : ''}
+        ${(year.length > 0) ? 'AND expense.year IN (:...year)' : ''}
       `,
       params: {
         idAccount,
-        categories: (categories) && arrayCategoriesIds,
+        categories,
         day_name,
         month,
         max_amount,
         min_amount,
         num_date,
-        subcategories: (subcategories) && arraySubcategoriesIds,
-        users: (users) && arrayUsersIds,
+        subcategories,
+        users,
         year,
-        yearly
       },
       accumulateBy
     }

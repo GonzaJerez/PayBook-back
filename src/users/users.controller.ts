@@ -102,11 +102,22 @@ export class UsersController  {
   }
 
   @HttpCode(200)
-  @Post('premium')
+  @Post('premium/:id')
   @Auth()
   becomePremium(
+    @Param('id', ParseUUIDPipe) id:string,
     @GetUser() user:User
   ){
-    return this.usersService.becomePremium(user)
+    return this.usersService.becomePremium(id, user)
+  }
+
+  @HttpCode(200)
+  @Delete('premium/:id')
+  @Auth()
+  removePremium(
+    @Param('id', ParseUUIDPipe) id:string,
+    @GetUser() user:User
+  ){
+    return this.usersService.removePremium(id, user)
   }
 }

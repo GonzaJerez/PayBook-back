@@ -27,4 +27,12 @@ export class AuthController {
   ){
     return this.authService.checkToken(user)
   }
+
+  @Get('checkPremium')
+  @Auth()
+  checkPremium(
+    @GetUser() user:User
+  ){
+    return this.authService.checkIsPremium(user)
+  }
 }

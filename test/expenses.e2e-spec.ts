@@ -394,11 +394,10 @@ describe('ExpensesController (e2e)', () => {
     it('should return a expense on account by filters and total amounts', async () => {
       const currentDate = new Date()
       const MAX_AMOUNT = 1600;
-      const MONTHLY = 'false';
       const DAY_NAME = daysNames[currentDate.getDay()]
 
       await request(app.getHttpServer())
-        .get(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}?categories=${categoryTest1.id}&max_amount=${MAX_AMOUNT}&monthly=${MONTHLY}&day_name=${DAY_NAME}`)
+        .get(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}?categories=${categoryTest1.id}&max_amount=${MAX_AMOUNT}&day_name=${DAY_NAME}`)
         .auth(userTest1.token, {type: 'bearer'})
         .expect(200)
         .then(res => {

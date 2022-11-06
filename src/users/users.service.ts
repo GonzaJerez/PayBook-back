@@ -146,7 +146,7 @@ export class UsersService {
     try {
       await this.userRepository.save(user);
 
-      return user;
+      return {user};
     } catch (error) {
       this.handleExceptions(error)
     }
@@ -214,22 +214,33 @@ export class UsersService {
     try {
       await this.userRepository.save(user);
 
-      return user;
+      return {user};
 
     } catch (error) {
       this.handleExceptions(error)
     }
   }
 
-  async becomePremium(user: User) {
+  async becomePremium(id: string, userAuth: User) {
 
-    // TODO: Implementacion de pago
+    const user = await this.findOne(id, userAuth)
 
     user.roles = [ValidRoles.USER_PREMIUM]
 
     await this.userRepository.save(user)
 
-    return user;
+    return {user};
+  }
+
+  async removePremium(id: string, userAuth: User) {
+
+    const user = await this.findOne(id, userAuth)
+
+    user.roles = [ValidRoles.USER]
+
+    await this.userRepository.save(user)
+
+    return {user};
   }
 
   /**
@@ -238,7 +249,7 @@ export class UsersService {
    * @param userModifiedId User a modificar
    */
   private isAuthUser(userAuth: User, userModifiedId: string) {
-    if (userAuth.id !== userModifiedId && !userAuth.roles.includes(ValidRoles.ADMIN)) {
+    if (userAuth.id !== userModifiedId && !userAuth.roles.includes(ValidRoles.ADMIN) && userAuth.google) {
       this.handleExceptions({
         status: 403,
         message: `You don't have permission to perform this action`

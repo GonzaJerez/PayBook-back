@@ -38,12 +38,12 @@ export class ExpensesController {
     return this.expensesService.findPrincipalAmounts(idAccount);
   }
 
-  @Get('statistics')
+  @Post('statistics')
   statistics(
     @Param('idAccount', ParseUUIDPipe) idAccount:string,
-    @Query() queryParameters:FiltersExpensesDto
+    @Body() filters:FiltersExpensesDto
   ) {
-    return this.expensesService.statistics(idAccount, queryParameters);
+    return this.expensesService.statistics(idAccount, filters);
   }
 
   @Get(':id')

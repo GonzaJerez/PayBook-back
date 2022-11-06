@@ -7,16 +7,21 @@ import * as bcrypt from 'bcrypt'
 import {LoginUserDto} from './dto/login-user.dto';
 import {User} from '../users/entities/user.entity';
 import {JwtPayload} from './interfaces/jwt-payload.interface';
+import axios, {Axios} from 'axios';
+import {ValidRoles} from './interfaces';
+import {ConfigService} from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
 
   logger = new Logger('AuthService')
+  private readonly axios: Axios = axios
 
   constructor(
     @InjectRepository(User)
-    public userRepository: Repository<User>,
-    public jwtService: JwtService,
+    private readonly userRepository: Repository<User>,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService
   ) {}
 
   async login(loginUserDto: LoginUserDto) {
@@ -26,11 +31,11 @@ export class AuthService {
       // Para poder recuperar la password que por defecto no viene en la entity
       const user = await this.userRepository.findOne({
         where: {email: email.toLocaleLowerCase()},
-        select: {email: true, password: true, id: true, isActive: true, fullName: true, roles: true, google:true},
+        select: {email: true, password: true, id: true, isActive: true, fullName: true, roles: true, google: true},
         relations: {accounts: true}
       })
 
-      if(!user)
+      if (!user)
         this.handleExceptions({
           status: 401,
           message: `No existe usuario registrado con el email ${email}`
@@ -58,8 +63,10 @@ export class AuthService {
       delete user.password;
       delete user.accounts;
 
+      const {user:checkedUser} = await this.checkIsPremium(user)
+
       return {
-        user,
+        user: checkedUser,
         token: this.generateToken({id: user.id})
       }
     } catch (error) {
@@ -67,11 +74,12 @@ export class AuthService {
     }
   }
 
-  
+
 
   async checkToken(user: User) {
+    const {user:checkedUser} = await this.checkIsPremium(user)
     return {
-      user,
+      user: checkedUser,
       token: this.generateToken({id: user.id})
     }
   }
@@ -80,7 +88,29 @@ export class AuthService {
     return this.jwtService.sign(payload)
   }
 
-  
+
+  async checkIsPremium(user:User) {
+    let checkedUser = user;
+    const {data} = await this.axios.get(`https://api.revenuecat.com/v1/subscribers/${user.id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.configService.get('REVENUE_API_KEY')}`
+      }
+    })
+
+    if(!data?.subscriber?.subscriptions.paybook_pro || data?.subscriber?.subscriptions?.paybook_pro?.unsubscribe_detected_at){
+      checkedUser= {
+        ...user,
+        roles: [ValidRoles.USER]
+      }
+      await this.userRepository.save(checkedUser)
+    }
+    
+    return {
+      user: checkedUser
+    }
+  }
+
 
   handleExceptions(error: any) {
 

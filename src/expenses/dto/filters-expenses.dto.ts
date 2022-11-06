@@ -1,5 +1,5 @@
-import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsIn, IsOptional, IsPositive, IsString, isString, IsUUID, Max, Min } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsPositive, IsString, isString, IsUUID, Max, Min, ValidateNested } from "class-validator";
 import {PaginationDto} from "../../common/dtos/pagination.dto";
 import {daysNames} from "../utils/days-names";
 
@@ -7,7 +7,6 @@ export class FiltersExpensesDto{
 
     @IsOptional()
     @IsPositive()
-    // Transformar
     @Type(()=> Number)
     min_amount?: number;
 
@@ -17,38 +16,39 @@ export class FiltersExpensesDto{
     max_amount?: number;
 
     @IsOptional()
-    @Min(1)
-    @Max(31)
+    @IsNumber({},{each:true})
+    @IsArray()
     @Type(()=>Number)
-    num_date?: number;
+    num_date?: number[];
 
     @IsOptional()
-    @Min(0)
-    @Max(12)
+    @IsNumber({},{each:true})
     @Type(()=>Number)
-    month?: number;
+    month?: number[];
 
     @IsOptional()
-    @Min(0)
+    @IsNumber({},{each:true})
     @Type(()=>Number)
-    year?: number;
+    year?: number[];
 
     @IsOptional()
-    @IsIn(daysNames)
-    day_name?: string;
+    @IsString({each: true})
+    @IsArray()
+    @IsIn(daysNames, {each:true})
+    day_name?: string[];
 
     @IsOptional()
-    monthly?: boolean;
+    @IsUUID("4",{each:true})
+    @IsArray()
+    users?: string[]
 
     @IsOptional()
-    yearly?: boolean;
+    @IsUUID("4",{each:true})
+    @IsArray()
+    categories?: string[]
 
     @IsOptional()
-    users?: string
-
-    @IsOptional()
-    categories?: string
-
-    @IsOptional()
-    subcategories?: string
+    @IsUUID("4",{each:true})
+    @IsArray()
+    subcategories?: string[]
 }
