@@ -66,8 +66,10 @@ export class UsersService {
         user = await this.createNewUser(dataToCreateUser, {google: true})
       }
 
+      const {user:checkedUser} = await this.authService.checkIsPremium(user)
+
       return {
-        user,
+        user: checkedUser,
         token: this.authService.generateToken({id: user.id})
       }
     } catch (error) {

@@ -88,7 +88,11 @@ export class AuthService {
     return this.jwtService.sign(payload)
   }
 
-
+  /**
+   * Valida si el usuario logueado es premium o no
+   * @param user actualUser
+   * @returns user updated after checking if still be premium or not
+   */
   async checkIsPremium(user:User) {
     let checkedUser = user;
     const {data} = await this.axios.get(`https://api.revenuecat.com/v1/subscribers/${user.id}`, {
