@@ -22,7 +22,12 @@
     "test:e2e:watch": "jest --config ./test/jest-e2e.json --watch --verbose --runInBand",
     "test:e2e:cov": "jest --config ./test/jest-e2e.json --coverage",
     "docker:prod": "docker compose -f docker-compose.prod.yml up --build",
-    "docker:prod:down": "docker compose -f docker-compose.prod.yml down"
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli -d ormconfig.ts",
+    "migration:create": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli migration:create ./src/migrations/prueba",
+    "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name",
+    "migration:run": "npm run build && npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
