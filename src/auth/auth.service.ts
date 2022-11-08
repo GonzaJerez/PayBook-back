@@ -105,31 +105,36 @@ export class AuthService {
    */
   async checkIsPremium(user: User) {
     let checkedUser = user;
-    const { data } = await this.axios.get(
-      `https://api.revenuecat.com/v1/subscribers/${user.revenue_id || ''}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.configService.get('REVENUE_API_KEY')}`,
+    try {
+      const { data } = await this.axios.get(
+        `https://api.revenuecat.com/v1/subscribers/${user.revenue_id || ''}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.configService.get(
+              'REVENUE_API_KEY',
+            )}`,
+          },
         },
-      },
-    );
+      );
+      if (
+        !data?.subscriber?.subscriptions.paybook_pro ||
+        data?.subscriber?.subscriptions?.paybook_pro?.unsubscribe_detected_at
+      ) {
+        checkedUser = {
+          ...user,
+          roles: [ValidRoles.USER],
+          revenue_id: null,
+        };
+        await this.userRepository.save(checkedUser);
+      }
 
-    if (
-      !data?.subscriber?.subscriptions.paybook_pro ||
-      data?.subscriber?.subscriptions?.paybook_pro?.unsubscribe_detected_at
-    ) {
-      checkedUser = {
-        ...user,
-        roles: [ValidRoles.USER],
-        revenue_id: null,
+      return {
+        user: checkedUser,
       };
-      await this.userRepository.save(checkedUser);
+    } catch (e) {
+      return { user };
     }
-
-    return {
-      user: checkedUser,
-    };
   }
 
   handleExceptions(error: any) {
