@@ -11,7 +11,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { SubcategoriesModule } from './subcategories/subcategories.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { CreditPaymentsModule } from './credit_payments/credit_payments.module';
-import {AppDataSource} from 'ormconfig';
+import { AppDataSource } from 'ormconfig';
 
 @Module({
   imports: [
