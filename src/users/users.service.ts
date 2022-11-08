@@ -26,6 +26,7 @@ import { defaultAccount } from '../accounts/data/default-account';
 import { generateAccountAccessKey } from '../common/helpers/generateAccountAccessKey';
 import { defaultCategories } from '../categories/data/default-categories';
 import { PASSWORD_TEST } from '../seed/mocks/seedMock';
+import { CreateSubscriptionDto } from './dtos/create-subscription.dto';
 
 @Injectable()
 export class UsersService {
@@ -249,10 +250,15 @@ export class UsersService {
     }
   }
 
-  async becomePremium(id: string, userAuth: User) {
+  async becomePremium(
+    id: string,
+    userAuth: User,
+    createSubscription: CreateSubscriptionDto,
+  ) {
     const user = await this.findOne(id, userAuth);
 
     user.roles = [ValidRoles.USER_PREMIUM];
+    user.revenue_id = createSubscription.revenue_id;
 
     await this.userRepository.save(user);
 
@@ -263,6 +269,7 @@ export class UsersService {
     const user = await this.findOne(id, userAuth);
 
     user.roles = [ValidRoles.USER];
+    user.revenue_id = null;
 
     await this.userRepository.save(user);
 

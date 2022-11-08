@@ -106,7 +106,7 @@ export class AuthService {
   async checkIsPremium(user: User) {
     let checkedUser = user;
     const { data } = await this.axios.get(
-      `https://api.revenuecat.com/v1/subscribers/${user.id}`,
+      `https://api.revenuecat.com/v1/subscribers/${user.revenue_id || ''}`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -122,6 +122,7 @@ export class AuthService {
       checkedUser = {
         ...user,
         roles: [ValidRoles.USER],
+        revenue_id: null,
       };
       await this.userRepository.save(checkedUser);
     }
