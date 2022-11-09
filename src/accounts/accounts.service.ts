@@ -1,26 +1,31 @@
-import {BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException} from '@nestjs/common';
-import {InjectRepository} from '@nestjs/typeorm';
-import {validate as uuidValidate} from 'uuid'
-import {Repository} from 'typeorm';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { validate as uuidValidate } from 'uuid';
+import { Repository } from 'typeorm';
 
-import {generateAccountAccessKey} from '../common/helpers/generateAccountAccessKey';
-import {User} from '../users/entities/user.entity';
-import {CreateAccountDto} from './dto/create-account.dto';
-import {UpdateAccountDto} from './dto/update-account.dto';
-import {Account} from './entities/account.entity';
-import {ValidRoles} from '../auth/interfaces';
-import {PaginationDto} from '../common/dtos/pagination.dto';
-import {JoinAccountDto} from './dto/join-account.dto';
-import {PushOutAccountDto} from './dto/push-out-account.dto';
-import {Category} from '../categories/entities/category.entity';
-import {defaultCategories} from '../categories/data/default-categories';
-import {Subcategory} from '../subcategories/entities/subcategory.entity';
+import { generateAccountAccessKey } from '../common/helpers/generateAccountAccessKey';
+import { User } from '../users/entities/user.entity';
+import { CreateAccountDto } from './dto/create-account.dto';
+import { UpdateAccountDto } from './dto/update-account.dto';
+import { Account } from './entities/account.entity';
+import { ValidRoles } from '../auth/interfaces';
+import { JoinAccountDto } from './dto/join-account.dto';
+import { PushOutAccountDto } from './dto/push-out-account.dto';
+import { Category } from '../categories/entities/category.entity';
+import { defaultCategories } from '../categories/data/default-categories';
+import { Subcategory } from '../subcategories/entities/subcategory.entity';
 
 @Injectable()
 export class AccountsService {
-
-  private readonly LIMIT_FREE_ACCOUNT = 2
-  private readonly logger = new Logger()
+  private readonly LIMIT_FREE_ACCOUNT = 1;
+  private readonly logger = new Logger();
 
   constructor(
     @InjectRepository(Account)
@@ -28,13 +33,11 @@ export class AccountsService {
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Subcategory)
-    private readonly subcategoryRepository: Repository<Subcategory>
+    private readonly subcategoryRepository: Repository<Subcategory>,
   ) {}
 
-
   async create(createAccountDto: CreateAccountDto, user: User) {
-
-    this.validateLimitAccounts(user)
+    this.validateLimitAccounts(user);
 
     try {
       // Creo cuenta
@@ -43,180 +46,166 @@ export class AccountsService {
         access_key: generateAccountAccessKey(),
         admin_user: user,
         creator_user: user,
-        users: [user]
-      })
+        users: [user],
+      });
 
       // Creo categorias por defecto para la cuenta creada
       const categories = this.categoryRepository.create(
-        defaultCategories.map(cat => ({
+        defaultCategories.map((cat) => ({
           name: cat.name,
           subcategories: this.subcategoryRepository.create(
-            cat.subcategories.map(subcat => ({
-              name: subcat
-            }))
-          )
-        }))
-      )
+            cat.subcategories.map((subcat) => ({
+              name: subcat,
+            })),
+          ),
+        })),
+      );
 
       account.categories = categories;
 
-      await this.accountRepository.save(account)
-      return {account}
-
+      await this.accountRepository.save(account);
+      return { account };
     } catch (error) {
       this.handleExceptions(error);
     }
   }
 
-
   async findAll(user: User) {
-
-    const accounts = user.accounts
-    const totalAccounts = user.accounts.length
+    const accounts = user.accounts;
+    const totalAccounts = user.accounts.length;
 
     return {
       totalAccounts,
-      accounts
+      accounts,
     };
   }
 
-
   async findOne(id: string, user: User) {
-
-    this.isAuthUser(user, id)
+    this.isAuthUser(user, id);
 
     try {
       const account = await this.accountRepository.findOne({
-        where: {id},
-        relations: {admin_user: true, creator_user: true, users: true}
-      })
+        where: { id },
+        relations: { admin_user: true, creator_user: true, users: true },
+      });
 
-      this.isValidAccount(account, user)
-      return account
-
+      this.isValidAccount(account, user);
+      return account;
     } catch (error) {
-      this.handleExceptions(error)
+      this.handleExceptions(error);
     }
   }
 
   async update(id: string, updateAccountDto: UpdateAccountDto, user: User) {
+    const accountToUpdate = await this.findOne(id, user);
 
-    const accountToUpdate = await this.findOne(id, user)
-
-    this.isAdminAccount(accountToUpdate, user)
+    this.isAdminAccount(accountToUpdate, user);
 
     try {
       const updatedAccount = {
         ...accountToUpdate,
-        ...updateAccountDto
-      }
+        ...updateAccountDto,
+      };
 
-      await this.accountRepository.save(updatedAccount)
+      await this.accountRepository.save(updatedAccount);
       return {
-        account: updatedAccount
-      }
-
+        account: updatedAccount,
+      };
     } catch (error) {
-      this.handleExceptions(error)
+      this.handleExceptions(error);
     }
   }
 
-
   async join(joinAccountDto: JoinAccountDto, user: User) {
-
     // Recupera la cuenta completa con todas sus relaciones
-    const account = await this.findAccountWithRelations({...joinAccountDto}, user)
+    const account = await this.findAccountWithRelations(
+      { ...joinAccountDto },
+      user,
+    );
 
     if (this.idsUsersInAccount(account.users).includes(user.id))
-      throw new BadRequestException(`User already exist in this account`)
+      throw new BadRequestException(`User already exist in this account`);
 
     // Valida que la cuenta no haya llegado al limite de usuarios
     if (account.users.length === account.max_num_users)
-      throw new ForbiddenException(`The account already has the maximum number of users`)
+      throw new ForbiddenException(
+        `The account already has the maximum number of users`,
+      );
 
-    account.users = [...account.users, user]
+    account.users = [...account.users, user];
 
     try {
-      await this.accountRepository.save(account)
-      return {account}
-
+      await this.accountRepository.save(account);
+      return { account };
     } catch (error) {
-      this.handleExceptions(error)
+      this.handleExceptions(error);
     }
   }
-
 
   async leave(id: string, user: User) {
     try {
       // Recupera la cuenta completa con sus relaciones
-      const account = await this.findAccountWithRelations({id}, user)
+      const account = await this.findAccountWithRelations({ id }, user);
 
       // Si el usuario existe en esta cuenta lo elimino
       if (this.idsUsersInAccount(account.users).includes(user.id)) {
-        account.users = account.users.filter(us => us.id !== user.id)
+        account.users = account.users.filter((us) => us.id !== user.id);
 
         // Si todavia quedan mas usuarios hago el cambio de administrador
         // sino desactivo la cuenta
         if (account.users.length > 0) {
-          account.admin_user = account.users[0]
+          account.admin_user = account.users[0];
         } else {
-          account.isActive = false
+          account.isActive = false;
         }
       }
 
       // Actualizo la cuenta y la retorno
-      await this.accountRepository.save(account)
-      return {account}
-
+      await this.accountRepository.save(account);
+      return { account };
     } catch (error) {
-      this.handleExceptions(error)
+      this.handleExceptions(error);
     }
   }
-
 
   async pushout(id: string, pushOutAccountDto: PushOutAccountDto, user: User) {
     // Recupera la cuenta completa con sus relaciones
-    const account = await this.findAccountWithRelations({id}, user)
+    const account = await this.findAccountWithRelations({ id }, user);
 
-    this.isAdminAccount(account, user)
+    this.isAdminAccount(account, user);
 
     // Elimina de "account.users" todos los usuarios que envia el cliente
-    account.users = account.users.filter(us => {
+    account.users = account.users.filter((us) => {
       for (const userId of pushOutAccountDto.idUsers) {
         if (!uuidValidate(userId)) {
-          throw new BadRequestException(`The userIds are not uuid's invalid`)
+          throw new BadRequestException(`The userIds are not uuid's invalid`);
         }
       }
-      return !pushOutAccountDto.idUsers.includes(us.id)
-    })
-
+      return !pushOutAccountDto.idUsers.includes(us.id);
+    });
 
     try {
-      await this.accountRepository.save(account)
-      return {account}
-    }
-    catch (error) {
-      this.handleExceptions(error)
+      await this.accountRepository.save(account);
+      return { account };
+    } catch (error) {
+      this.handleExceptions(error);
     }
   }
 
-
   async remove(id: string, user: User) {
-
     // Recupera la cuenta completa con sus relaciones
-    const account = await this.findAccountWithRelations({id}, user)
+    const account = await this.findAccountWithRelations({ id }, user);
 
-    this.isAdminAccount(account, user)
+    this.isAdminAccount(account, user);
 
     account.isActive = false;
-    account.users = []
+    account.users = [];
 
     try {
-      await this.accountRepository.save(account)
-      return {account};
-
+      await this.accountRepository.save(account);
+      return { account };
     } catch (error) {
-      this.handleExceptions(error)
+      this.handleExceptions(error);
     }
   }
 
@@ -226,7 +215,7 @@ export class AccountsService {
    * @returns boolean
    */
   private isAdmin(user: User): boolean {
-    return user.roles.includes(ValidRoles.ADMIN)
+    return user.roles.includes(ValidRoles.ADMIN);
   }
 
   /**
@@ -234,20 +223,27 @@ export class AccountsService {
    * @param user usuario que hace peticion
    */
   private validateLimitAccounts(user: User) {
-    const activeAccounts = user.accounts.filter(account => account.isActive)
-    if (activeAccounts.length === this.LIMIT_FREE_ACCOUNT && user.roles.includes(ValidRoles.USER))
-      throw new ForbiddenException('To create a more accounts user needs to be premium')
+    const activeAccounts = user.accounts.filter((account) => account.isActive);
+    if (
+      activeAccounts.length === this.LIMIT_FREE_ACCOUNT &&
+      user.roles.includes(ValidRoles.USER)
+    )
+      throw new ForbiddenException(
+        'To create a more accounts user needs to be premium',
+      );
   }
 
   /**
-     * Valida que sea un usuario de la cuenta actual o un admin
-     * @param userAuth User que realiza la peticion
-     * @param accountModifiedId User a modificar
-     */
+   * Valida que sea un usuario de la cuenta actual o un admin
+   * @param userAuth User que realiza la peticion
+   * @param accountModifiedId User a modificar
+   */
   private isAuthUser(userAuth: User, accountModifiedId: string) {
-    const accountsIds = userAuth.accounts.map(account => account.id)
+    const accountsIds = userAuth.accounts.map((account) => account.id);
     if (!accountsIds.includes(accountModifiedId) && !this.isAdmin(userAuth)) {
-      throw new ForbiddenException(`You don't have permission to perform this action`)
+      throw new ForbiddenException(
+        `You don't have permission to perform this action`,
+      );
     }
   }
 
@@ -260,8 +256,8 @@ export class AccountsService {
     if (account.admin_user.id !== user.id && !this.isAdmin(user))
       this.handleExceptions({
         status: 403,
-        message: `Don't have admin permissions`
-      })
+        message: `Don't have admin permissions`,
+      });
   }
 
   /**
@@ -269,20 +265,22 @@ export class AccountsService {
    * @param term termino por el que se va a buscar
    * @returns cuenta con todas sus relaciones
    */
-  private async findAccountWithRelations(term: {[term: string]: string}, user: User) {
+  private async findAccountWithRelations(
+    term: { [term: string]: string },
+    user: User,
+  ) {
     try {
       // Busco cuenta por "id" o "access_key"
       const account = await this.accountRepository.findOne({
         where: term,
-        relations: {admin_user: true, creator_user: true, users: true}
-      })
+        relations: { admin_user: true, creator_user: true, users: true },
+      });
 
-      this.isValidAccount(account, user)
+      this.isValidAccount(account, user);
 
       return account;
-
     } catch (error) {
-      this.handleExceptions(error)
+      this.handleExceptions(error);
     }
   }
 
@@ -292,16 +290,17 @@ export class AccountsService {
    * @param user Usuario que hace peticion, si es admin va a poder ver las cuentas desactivadas
    */
   private isValidAccount(account: Account, user: User) {
-    if (!account) this.handleExceptions({
-      status: 404,
-      message: `Account not found`
-    })
+    if (!account)
+      this.handleExceptions({
+        status: 404,
+        message: `Account not found`,
+      });
 
     if (!account.isActive && !this.isAdmin(user))
       this.handleExceptions({
         status: 404,
-        message: `The account no longer exists, it was deleted`
-      })
+        message: `The account no longer exists, it was deleted`,
+      });
   }
 
   /**
@@ -310,7 +309,7 @@ export class AccountsService {
    * @returns Array de ids de cada usuario
    */
   private idsUsersInAccount(usersInAccount: User[]): string[] {
-    return usersInAccount.map(us => us.id);
+    return usersInAccount.map((us) => us.id);
   }
 
   /**
@@ -318,17 +317,16 @@ export class AccountsService {
    * @param error {status:n, message:string}
    */
   private handleExceptions(error: any) {
-
     if (error.status === 403) {
-      throw new ForbiddenException(error.message)
+      throw new ForbiddenException(error.message);
     }
 
     if (error.status === 404) {
-      throw new NotFoundException(error.message)
+      throw new NotFoundException(error.message);
     }
 
     this.logger.error(error);
 
-    throw new InternalServerErrorException('Mensaje de error')
+    throw new InternalServerErrorException('Mensaje de error');
   }
 }
