@@ -1,11 +1,20 @@
-import {Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe} from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 
-import {SubcategoriesService} from './subcategories.service';
-import {CreateSubcategoryDto} from './dto/create-subcategory.dto';
-import {UpdateSubcategoryDto} from './dto/update-subcategory.dto';
-import {GetUser} from '../auth/decorators/get-user.decorator';
-import {User} from '../users/entities/user.entity';
-import {ValidUserToAccessAccount} from '../common/decorators/valid-user-to-access-account.decorator';
+import { SubcategoriesService } from './subcategories.service';
+import { CreateSubcategoryDto } from './dto/create-subcategory.dto';
+import { UpdateSubcategoryDto } from './dto/update-subcategory.dto';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from '../users/entities/user.entity';
+import { ValidUserToAccessAccount } from '../common/decorators/valid-user-to-access-account.decorator';
 
 @Controller('accounts/:idAccount/categories/:idCategory/subcategories')
 @ValidUserToAccessAccount()
@@ -16,15 +25,19 @@ export class SubcategoriesController {
   create(
     @Body() createSubcategoryDto: CreateSubcategoryDto,
     @Param('idCategory', ParseUUIDPipe) idCategory: string,
-    @GetUser() user:User
+    @GetUser() user: User,
   ) {
-    return this.subcategoriesService.create(createSubcategoryDto, idCategory, user);
+    return this.subcategoriesService.create(
+      createSubcategoryDto,
+      idCategory,
+      user,
+    );
   }
 
   @Get()
   findAll(
     @Param('idCategory', ParseUUIDPipe) idCategory: string,
-    @GetUser() user:User
+    @GetUser() user: User,
   ) {
     return this.subcategoriesService.findAll(idCategory, user);
   }
@@ -37,7 +50,7 @@ export class SubcategoriesController {
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateSubcategoryDto: UpdateSubcategoryDto
+    @Body() updateSubcategoryDto: UpdateSubcategoryDto,
   ) {
     return this.subcategoriesService.update(id, updateSubcategoryDto);
   }

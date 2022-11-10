@@ -90,6 +90,15 @@ export class User {
   })
   revenue_id: string;
 
+  @ApiProperty({
+    example: '452319',
+    description: 'Security code to recovery password',
+  })
+  @Column('text', {
+    nullable: true,
+  })
+  temporalSecurityCode: string;
+
   @ManyToMany(() => Account, (account) => account.users, { cascade: true })
   @JoinTable({ name: 'users_accounts' })
   accounts: Account[];

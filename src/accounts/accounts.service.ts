@@ -225,7 +225,7 @@ export class AccountsService {
   private validateLimitAccounts(user: User) {
     const activeAccounts = user.accounts.filter((account) => account.isActive);
     if (
-      activeAccounts.length === this.LIMIT_FREE_ACCOUNT &&
+      activeAccounts.length >= this.LIMIT_FREE_ACCOUNT &&
       user.roles.includes(ValidRoles.USER)
     )
       throw new ForbiddenException(

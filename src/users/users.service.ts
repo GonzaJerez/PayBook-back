@@ -11,6 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import axios, { Axios } from 'axios';
+import { ConfigService } from '@nestjs/config';
 
 import { AuthService } from '../auth/auth.service';
 import { ValidRoles } from '../auth/interfaces';
@@ -27,11 +28,16 @@ import { generateAccountAccessKey } from '../common/helpers/generateAccountAcces
 import { defaultCategories } from '../categories/data/default-categories';
 import { PASSWORD_TEST } from '../seed/mocks/seedMock';
 import { CreateSubscriptionDto } from './dtos/create-subscription.dto';
+import { PasswordRecoveryDto } from './dtos/password-recovery.dto';
+import { transporter } from '../common/helpers/nodemailer.config';
+import { SecurityCodeDto } from './dtos/security-code.dto';
+import { RenewPasswordDto } from './dtos/renew-password.dto';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger();
   private readonly axios: Axios = axios;
+  private readonly transporter = transporter;
 
   constructor(
     @InjectRepository(User)
@@ -43,11 +49,11 @@ export class UsersService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Subcategory)
     private readonly subcategoryRepository: Repository<Subcategory>,
+    private readonly configService: ConfigService,
   ) {}
 
   async googleSignIn(loginGoogleDto: LoginGoogleDto) {
     const { tokenGoogle } = loginGoogleDto;
-
     try {
       const { name, email } = await this.googleVerify(tokenGoogle);
       const dataToCreateUser: CreateUserDto = {
@@ -73,10 +79,8 @@ export class UsersService {
       if (!user) {
         user = await this.createNewUser(dataToCreateUser, { google: true });
       } else {
-        const { user: checkedUser } = await this.authService.checkIsPremium(
-          user,
-        );
-        user = checkedUser;
+        const checkedUser = await this.authService.checkIsPremium(user);
+        user = checkedUser.user;
       }
 
       return {
@@ -187,6 +191,7 @@ export class UsersService {
           password: true,
           isActive: true,
           roles: true,
+          google: true,
         },
         relations: { accounts: true },
       });
@@ -276,6 +281,109 @@ export class UsersService {
     return { user };
   }
 
+  async passwordRecovery({ email }: PasswordRecoveryDto) {
+    // Genera código de seguridad de 6 digitos
+    const securityCode = String(Math.floor(Math.random() * 1000000)).padStart(
+      6,
+      '0',
+    );
+
+    try {
+      const user = await this.findUserByEmail(email);
+
+      if (!user)
+        this.handleExceptions({
+          status: 404,
+          message: `No se pudo recuperar el usuario con el email "${email.toLowerCase()}".`,
+        });
+
+      if (user.google)
+        this.handleExceptions({
+          status: 403,
+          message: `El usuario se encuentra registrado con google, no es posible recuperar la contraseña.`,
+        });
+
+      user.temporalSecurityCode = securityCode;
+
+      await this.userRepository.save(user);
+
+      await this.transporter.sendMail({
+        from: `"PayBook" <${this.configService.get('EMAIL_APP')}>`,
+        to: user.email,
+        subject: 'Recupero de contraseña',
+        html: `
+            <p>Tu código para recuperar la contraseña es: </p>
+            <b>${securityCode}<b/>
+        `,
+      });
+
+      return {
+        ok: true,
+        message: 'Código de seguridad enviado por email',
+      };
+    } catch (error) {
+      this.handleExceptions(error);
+    }
+  }
+
+  async validateSecurityCode({ code, email }: SecurityCodeDto) {
+    const user = await this.userRepository.findOneBy({
+      email: email.toLowerCase(),
+      temporalSecurityCode: code,
+    });
+
+    if (!user)
+      this.handleExceptions({
+        status: 404,
+        message: `Código de seguridad inválido`,
+      });
+
+    user.temporalSecurityCode = null;
+
+    await this.userRepository.save(user);
+
+    try {
+      return {
+        ok: true,
+        message: 'Código correcto',
+      };
+    } catch (error) {
+      this.handleExceptions(error);
+    }
+  }
+
+  async renewPassword({ email, password }: RenewPasswordDto) {
+    const user = await this.findUserByEmail(email);
+
+    if (!user)
+      this.handleExceptions({
+        status: 404,
+        message: `No se pudo recuperar el usuario con el email "${email.toLowerCase()}".`,
+      });
+
+    // Validar contraseña nueva
+    const isSameLastPass = bcrypt.compareSync(password, user.password);
+    if (isSameLastPass) {
+      this.handleExceptions({
+        status: 403,
+        message: 'La contraseña no puede ser igual a la anterior',
+      });
+    }
+
+    user.password = bcrypt.hashSync(password, 10);
+
+    await this.userRepository.save(user);
+
+    try {
+      return {
+        ok: true,
+        message: 'Contraseña actualizada correctamente',
+      };
+    } catch (error) {
+      this.handleExceptions(error);
+    }
+  }
+
   /**
    * Valida que sea el mismo usuario que se quiere modificar o un admin
    * @param userAuth User que realiza la peticion
@@ -283,8 +391,8 @@ export class UsersService {
    */
   private isAuthUser(userAuth: User, userModifiedId: string) {
     if (
-      userAuth.id !== userModifiedId &&
-      !userAuth.roles.includes(ValidRoles.ADMIN) &&
+      (userAuth.id !== userModifiedId &&
+        !userAuth.roles.includes(ValidRoles.ADMIN)) ||
       userAuth.google
     ) {
       this.handleExceptions({
@@ -341,7 +449,21 @@ export class UsersService {
 
   async findUserByEmail(email: string) {
     try {
-      const user = await this.userRepository.findOneBy({ email });
+      const user = await this.userRepository.findOne({
+        where: { email: email.toLowerCase() },
+        select: {
+          email: true,
+          password: true,
+          id: true,
+          isActive: true,
+          fullName: true,
+          roles: true,
+          google: true,
+          revenue_id: true,
+          temporalSecurityCode: true,
+        },
+      });
+
       return user;
     } catch (error) {
       this.handleExceptions(error);

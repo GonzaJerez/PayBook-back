@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppDataSource } from '../ormconfig';
+
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { AccountsModule } from './accounts/accounts.module';
@@ -11,7 +13,6 @@ import { CategoriesModule } from './categories/categories.module';
 import { SubcategoriesModule } from './subcategories/subcategories.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { CreditPaymentsModule } from './credit_payments/credit_payments.module';
-import { AppDataSource } from 'ormconfig';
 
 @Module({
   imports: [

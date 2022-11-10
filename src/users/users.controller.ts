@@ -29,6 +29,9 @@ import { UpdateUserDto } from './dtos/update-user.dto';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { CreateSubscriptionDto } from './dtos/create-subscription.dto';
+import { PasswordRecoveryDto } from './dtos/password-recovery.dto';
+import { SecurityCodeDto } from './dtos/security-code.dto';
+import { RenewPasswordDto } from './dtos/renew-password.dto';
 
 @Controller('users')
 export class UsersController {
@@ -133,5 +136,23 @@ export class UsersController {
   @Auth()
   removePremium(@Param('id', ParseUUIDPipe) id: string, @GetUser() user: User) {
     return this.usersService.removePremium(id, user);
+  }
+
+  @HttpCode(200)
+  @Post('password-recovery')
+  passwordRecovery(@Body() passwordRecoveryDto: PasswordRecoveryDto) {
+    return this.usersService.passwordRecovery(passwordRecoveryDto);
+  }
+
+  @HttpCode(200)
+  @Post('validate-security-code')
+  validateSecurityCode(@Body() securityCodeDto: SecurityCodeDto) {
+    return this.usersService.validateSecurityCode(securityCodeDto);
+  }
+
+  @HttpCode(200)
+  @Post('renew-password')
+  renewPassword(@Body() renewPassword: RenewPasswordDto) {
+    return this.usersService.renewPassword(renewPassword);
   }
 }

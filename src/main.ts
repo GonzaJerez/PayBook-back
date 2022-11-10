@@ -9,11 +9,11 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true
-    })
-  )
+      forbidNonWhitelisted: true,
+    }),
+  );
 
-  app.setGlobalPrefix('api')
+  app.setGlobalPrefix('api');
 
   const config = new DocumentBuilder()
     .setTitle('Gastos app')

@@ -1,36 +1,43 @@
-import {Type} from "class-transformer";
-import {IsNumber, IsOptional, IsPositive, IsString, IsUUID, Length, Min} from "class-validator";
+import { Type } from 'class-transformer';
+import {
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  IsUUID,
+  Length,
+  Min,
+} from 'class-validator';
 
 export class CreateExpenseDto {
-    
-    @IsPositive()
-    @Min(1)
-    @Type(()=>Number)
-    amount: number;
+  @IsPositive()
+  @Min(1)
+  @Type(() => Number)
+  amount: number;
 
-    @IsNumber()
-    @IsPositive()
-    complete_date: number;
-    
-    @IsString()
-    @IsOptional()
-    @Length(0, 50)
-    description?: string;
+  @IsNumber()
+  @IsPositive()
+  complete_date: number;
 
-    @IsPositive()
-    @Min(1)
-    @IsOptional()
-    @Type(()=>Number)
-    installments?: number;
+  @IsString()
+  @IsOptional()
+  @Length(0, 50)
+  description?: string;
 
-    @IsString()
-    @IsOptional()
-    @Length(0, 30)
-    name_credit_payment?: string;
+  @IsPositive()
+  @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  installments?: number;
 
-    @IsUUID()
-    categoryId: string;
+  @IsString()
+  @IsOptional()
+  @Length(0, 30)
+  name_credit_payment?: string;
 
-    @IsUUID()
-    subcategoryId: string;
+  @IsUUID()
+  categoryId: string;
+
+  @IsUUID()
+  subcategoryId: string;
 }

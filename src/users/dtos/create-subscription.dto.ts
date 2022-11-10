@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreateSubscriptionDto {
   @ApiProperty({
@@ -7,6 +7,5 @@ export class CreateSubscriptionDto {
     description: 'Revenue account identifier',
   })
   @IsString()
-  @IsEmail()
   revenue_id: string;
 }
