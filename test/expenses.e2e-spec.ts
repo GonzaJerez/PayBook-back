@@ -238,7 +238,7 @@ describe('ExpensesController (e2e)', () => {
 
   describe('findAll - /accounts/{:idAccount}/expenses (POST)', () => {
     it('should return all expenses in account with pagination', async () => {
-      const DEFAULT_LIMIT = 5;
+      const DEFAULT_LIMIT = 10;
       const DEFAULT_SKIP = 0;
       await request(app.getHttpServer())
         .get(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}`)
@@ -336,8 +336,6 @@ describe('ExpensesController (e2e)', () => {
         .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then((res) => {
-          // console.log(res.body.totalAmountFixedCostsMonthly);
-
           expect(typeof res.body.totalAmountOnMonth).toBe('number');
           expect(typeof res.body.totalAmountOnWeek).toBe('number');
           expect(typeof res.body.totalAmountOnDay).toBe('number');
@@ -409,7 +407,7 @@ describe('ExpensesController (e2e)', () => {
           expect(
             Object.keys(res.body.totalAmountsForSubcategories),
           ).toHaveLength(0);
-          expect(res.body).toHaveProperty('expensesForMonthInLastYear');
+          expect(res.body).toHaveProperty('amountsForMonthInActualYear');
           res.body.expenses.forEach((expense: Expense) => {
             expect(expense.month).toBe(currentDate.getMonth() + 1);
             expect(expense.year).toBe(currentDate.getFullYear());
@@ -435,7 +433,7 @@ describe('ExpensesController (e2e)', () => {
           expect(
             Object.keys(res.body.totalAmountsForSubcategories).length,
           ).toBeGreaterThanOrEqual(1);
-          expect(res.body).toHaveProperty('expensesForMonthInLastYear');
+          expect(res.body).toHaveProperty('amountsForMonthInActualYear');
           res.body.expenses.forEach((expense: Expense) => {
             expect(expense.category.id).toBe(categoryTest1.id);
             expect(expense.amount).toBeLessThan(MAX_AMOUNT);
@@ -459,7 +457,7 @@ describe('ExpensesController (e2e)', () => {
           expect(
             Object.keys(res.body.totalAmountsForCategories).length,
           ).toBeGreaterThanOrEqual(1);
-          expect(res.body).toHaveProperty('expensesForMonthInLastYear');
+          expect(res.body).toHaveProperty('amountsForMonthInActualYear');
           res.body.expenses.forEach((expense: Expense) => {
             expect(
               [categoryTest1.id, categoryTest2.id].includes(
@@ -583,7 +581,7 @@ describe('ExpensesController (e2e)', () => {
         .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then((res) => {
-          expect(res.body.id).toBe(expenseTest1.id);
+          expect(res.body.expense.id).toBe(expenseTest1.id);
         });
     });
   });

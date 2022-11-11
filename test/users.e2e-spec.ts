@@ -173,7 +173,7 @@ describe('UsersController (e2e)', () => {
         });
     });
 
-    it('should return error when email user already exist', async () => {
+    it('should return an Unauthorized error when email user already exist', async () => {
       await request(app.getHttpServer())
         .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send(mockToCreateUser);
@@ -181,7 +181,7 @@ describe('UsersController (e2e)', () => {
       await request(app.getHttpServer())
         .post(`${BASE_URL}${COMPLEMENT_URL}`)
         .send(mockToCreateUser)
-        .expect(400);
+        .expect(401);
     });
   });
 

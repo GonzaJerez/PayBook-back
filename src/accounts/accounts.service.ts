@@ -90,14 +90,14 @@ export class AccountsService {
       });
 
       this.isValidAccount(account, user);
-      return account;
+      return { account };
     } catch (error) {
       this.handleExceptions(error);
     }
   }
 
   async update(id: string, updateAccountDto: UpdateAccountDto, user: User) {
-    const accountToUpdate = await this.findOne(id, user);
+    const { account: accountToUpdate } = await this.findOne(id, user);
 
     this.isAdminAccount(accountToUpdate, user);
 
@@ -176,11 +176,11 @@ export class AccountsService {
 
     // Elimina de "account.users" todos los usuarios que envia el cliente
     account.users = account.users.filter((us) => {
-      for (const userId of pushOutAccountDto.idUsers) {
-        if (!uuidValidate(userId)) {
-          throw new BadRequestException(`The userIds are not uuid's invalid`);
-        }
-      }
+      // for (const userId of pushOutAccountDto.idUsers) {
+      //   if (!uuidValidate(userId)) {
+      //     throw new BadRequestException(`The userIds are not uuid's invalid`);
+      //   }
+      // }
       return !pushOutAccountDto.idUsers.includes(us.id);
     });
 

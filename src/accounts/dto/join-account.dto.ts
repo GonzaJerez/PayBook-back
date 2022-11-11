@@ -1,8 +1,13 @@
-import { IsString, Length, MaxLength, MinLength } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, Length } from 'class-validator';
 
 export class JoinAccountDto {
-
-    @IsString()
-    @Length(8,8)
-    access_key: string;
+  @ApiProperty({
+    example: '8c0b9bf0',
+    description: 'Key to access to an account',
+    uniqueItems: true,
+  })
+  @IsString()
+  @Length(8, 8)
+  access_key: string;
 }

@@ -15,7 +15,9 @@ import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
+  ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { LoginGoogleDto } from '../auth/dto/login-google.dto';
@@ -33,26 +35,30 @@ import { PasswordRecoveryDto } from './dtos/password-recovery.dto';
 import { SecurityCodeDto } from './dtos/security-code.dto';
 import { RenewPasswordDto } from './dtos/renew-password.dto';
 
+@ApiTags('Users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @HttpCode(200)
   @Post('google')
-  // @ApiOkResponse({description:'User was loged', type:User})
-  // @ApiBadRequestResponse({description:'Bad request'})
+  @ApiOkResponse({ description: 'User was loged', type: User })
+  @ApiBadRequestResponse({ description: 'Bad request' })
+  @ApiUnauthorizedResponse({ description: 'User created by email, not google' })
+  @ApiForbiddenResponse({ description: 'User was deleted' })
   googleSignIn(@Body() loginGoogleDto: LoginGoogleDto) {
     return this.usersService.googleSignIn(loginGoogleDto);
   }
 
   @Post('register')
   @ApiCreatedResponse({
-    status: 201,
     description: 'Registred user',
     type: User,
   })
-  @ApiBadRequestResponse({ status: 400, description: 'Bad request' })
-  @ApiForbiddenResponse({ description: 'Forbidden - Only can exist one admin' })
+  @ApiBadRequestResponse({ description: 'Bad request' })
+  @ApiUnauthorizedResponse({
+    description: 'Already exist other user with same email',
+  })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.register(createUserDto);
   }
@@ -60,8 +66,8 @@ export class UsersController {
   @Get()
   @ApiOkResponse({ description: 'Users was founded', type: [User] })
   @ApiBadRequestResponse({ description: 'Bad request' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized. Token not valid' })
-  @ApiForbiddenResponse({ description: 'Forbidden. Only admins' })
+  @ApiUnauthorizedResponse({ description: 'Token not valid' })
+  @ApiForbiddenResponse({ description: 'Only admins' })
   @ApiBearerAuth()
   @Auth(ValidRoles.ADMIN)
   findAll(@Query() queryParameters: PaginationDto) {
@@ -71,8 +77,9 @@ export class UsersController {
   @Get(':id')
   @ApiOkResponse({ description: 'User was founded', type: User })
   @ApiBadRequestResponse({ description: 'Bad request' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized. Token not valid' })
-  @ApiForbiddenResponse({ description: 'Forbidden. Only admins' })
+  @ApiUnauthorizedResponse({ description: 'Token not valid' })
+  @ApiForbiddenResponse({ description: 'Only himself user and admins' })
+  @ApiNotFoundResponse({ description: "Can't found user with email" })
   @ApiBearerAuth()
   @Auth()
   findOne(@Param('id', ParseUUIDPipe) id: string, @GetUser() user: User) {
@@ -82,9 +89,10 @@ export class UsersController {
   @Patch(':id')
   @ApiOkResponse({ description: 'User was updated', type: User })
   @ApiBadRequestResponse({ description: 'Bad request' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized. Token not valid' })
+  @ApiUnauthorizedResponse({ description: 'Token not valid' })
+  @ApiNotFoundResponse({ description: "Can't found user with email" })
   @ApiForbiddenResponse({
-    description: 'Forbidden. Only himself user and admins',
+    description: 'Only himself user and admins',
   })
   @ApiBearerAuth()
   @Auth()
@@ -99,9 +107,10 @@ export class UsersController {
   @Delete(':id')
   @ApiOkResponse({ description: 'User was desactivated', type: User })
   @ApiBadRequestResponse({ description: 'Bad request' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized. Token not valid' })
+  @ApiUnauthorizedResponse({ description: 'Token not valid' })
+  @ApiNotFoundResponse({ description: "Can't found user with email" })
   @ApiForbiddenResponse({
-    description: 'Forbidden. Only himself user and admins',
+    description: 'Only himself user and admins',
   })
   @ApiBearerAuth()
   @Auth()
@@ -112,8 +121,9 @@ export class UsersController {
   @Patch('reactivate/:id')
   @ApiOkResponse({ description: 'User was reactivated', type: User })
   @ApiBadRequestResponse({ description: 'Bad request' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized. Token not valid' })
-  @ApiForbiddenResponse({ description: 'Forbidden. Only admins' })
+  @ApiUnauthorizedResponse({ description: 'Token not valid' })
+  @ApiForbiddenResponse({ description: 'Only admins' })
+  @ApiNotFoundResponse({ description: "Can't found user with email" })
   @ApiBearerAuth()
   @Auth(ValidRoles.ADMIN)
   reactivate(@Param('id', ParseUUIDPipe) id: string) {
@@ -122,6 +132,14 @@ export class UsersController {
 
   @HttpCode(200)
   @Post('premium/:id')
+  @ApiOkResponse({ description: 'User upgrated to premium', type: User })
+  @ApiBadRequestResponse({ description: 'Bad request' })
+  @ApiUnauthorizedResponse({ description: 'Token not valid' })
+  @ApiNotFoundResponse({ description: "Can't found user with email" })
+  @ApiForbiddenResponse({
+    description: 'Only himself user and admins',
+  })
+  @ApiBearerAuth()
   @Auth()
   becomePremium(
     @Param('id', ParseUUIDPipe) id: string,
@@ -133,6 +151,14 @@ export class UsersController {
 
   @HttpCode(200)
   @Delete('premium/:id')
+  @ApiOkResponse({ description: 'User downgraded to common user', type: User })
+  @ApiBadRequestResponse({ description: 'Bad request' })
+  @ApiUnauthorizedResponse({ description: 'Token not valid' })
+  @ApiNotFoundResponse({ description: "Can't found user with email" })
+  @ApiForbiddenResponse({
+    description: 'Only himself user and admins',
+  })
+  @ApiBearerAuth()
   @Auth()
   removePremium(@Param('id', ParseUUIDPipe) id: string, @GetUser() user: User) {
     return this.usersService.removePremium(id, user);
@@ -140,18 +166,33 @@ export class UsersController {
 
   @HttpCode(200)
   @Post('password-recovery')
+  @ApiOkResponse({ description: 'Send email with code security' })
+  @ApiBadRequestResponse({ description: 'Bad request' })
+  @ApiNotFoundResponse({ description: "Can't found user with email" })
+  @ApiForbiddenResponse({
+    description: 'User registred with google, cannot recovery password',
+  })
   passwordRecovery(@Body() passwordRecoveryDto: PasswordRecoveryDto) {
     return this.usersService.passwordRecovery(passwordRecoveryDto);
   }
 
   @HttpCode(200)
   @Post('validate-security-code')
+  @ApiOkResponse({ description: 'Code security is valid' })
+  @ApiBadRequestResponse({ description: 'Bad request' })
+  @ApiNotFoundResponse({ description: 'Code security invalid' })
   validateSecurityCode(@Body() securityCodeDto: SecurityCodeDto) {
     return this.usersService.validateSecurityCode(securityCodeDto);
   }
 
   @HttpCode(200)
   @Post('renew-password')
+  @ApiOkResponse({ description: 'Password updated' })
+  @ApiBadRequestResponse({ description: 'Bad request' })
+  @ApiNotFoundResponse({ description: "Can't found user with email" })
+  @ApiForbiddenResponse({
+    description: 'Password cannot be the same at last one',
+  })
   renewPassword(@Body() renewPassword: RenewPasswordDto) {
     return this.usersService.renewPassword(renewPassword);
   }

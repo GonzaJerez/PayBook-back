@@ -201,10 +201,10 @@ describe('AccountsController (e2e)', () => {
         .auth(seedAdmin.token, { type: 'bearer' })
         .expect(200)
         .then((res) => {
-          expect(res.body.id).toBe(accountTest1.id);
-          expect(res.body).toHaveProperty('users');
-          expect(res.body).toHaveProperty('creator_user');
-          expect(res.body).toHaveProperty('admin_user');
+          expect(res.body.account.id).toBe(accountTest1.id);
+          expect(res.body.account).toHaveProperty('users');
+          expect(res.body.account).toHaveProperty('creator_user');
+          expect(res.body.account).toHaveProperty('admin_user');
         });
     });
 
@@ -214,10 +214,10 @@ describe('AccountsController (e2e)', () => {
         .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then((res) => {
-          expect(res.body.id).toBe(accountTest1.id);
-          expect(res.body).toHaveProperty('users');
-          expect(res.body).toHaveProperty('creator_user');
-          expect(res.body).toHaveProperty('admin_user');
+          expect(res.body.account.id).toBe(accountTest1.id);
+          expect(res.body.account).toHaveProperty('users');
+          expect(res.body.account).toHaveProperty('creator_user');
+          expect(res.body.account).toHaveProperty('admin_user');
         });
     });
 

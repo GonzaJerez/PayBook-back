@@ -42,34 +42,14 @@ export class SubcategoriesService {
 
     const category = await this.findActualCategory(idCategory, user);
 
-    // Valida que no exista una subcategoria activa llamada igual en la misma categoria
-    const existNameSubcategory = category.subcategories.find(
-      (cat) => cat.name === capitalizeName,
-    );
-    if (existNameSubcategory && existNameSubcategory.isActive)
-      throw new BadRequestException(
-        `Already exist subcategory named ${capitalizeName} on this category`,
-      );
+    // Valida que no exista categoria activa con el mismo nombre
+    this.validateNameSubcategory(category, capitalizeName);
 
     try {
-      let subcategory: Subcategory;
-
-      // Si existe subcategoria eliminada con ese nombre la reactivo
-      if (existNameSubcategory && !existNameSubcategory.isActive) {
-        subcategory = {
-          ...existNameSubcategory,
-          isActive: true,
-          category,
-        };
-      }
-
-      // Si no existia subcategoria con ese nombre creo una nueva
-      if (!existNameSubcategory) {
-        subcategory = this.subcategoryRepository.create({
-          name: capitalizeName,
-          category,
-        });
-      }
+      const subcategory = this.subcategoryRepository.create({
+        name: capitalizeName,
+        category,
+      });
 
       await this.subcategoryRepository.save(subcategory);
       delete subcategory.category?.subcategories;
@@ -85,7 +65,7 @@ export class SubcategoriesService {
 
     const subcategories = category.subcategories.filter((cat) => cat.isActive);
 
-    return subcategories;
+    return { subcategories };
   }
 
   async findOne(id: string) {
@@ -157,9 +137,6 @@ export class SubcategoriesService {
    * @returns complete exists category
    */
   private async findActualCategory(idCategory: string, user: User) {
-    if (!validateUUID(idCategory))
-      throw new BadRequestException(`"idCategory" is not a valid uuid`);
-
     try {
       const actualCategory = await this.categoryRepository.findOne({
         where: { id: idCategory },
@@ -175,6 +152,22 @@ export class SubcategoriesService {
     } catch (error) {
       this.handleExceptions(error);
     }
+  }
+
+  /**
+   * Validates that there is no subcategory in this category with the same name
+   * @param category actual category
+   * @param actualName name subcategory
+   */
+  private validateNameSubcategory(category: Category, actualName: string) {
+    // Valida que no exista una subcategoria activa llamada igual en la misma categoria
+    const existNameSubcategory = category.subcategories.find(
+      (cat) => cat.name === actualName,
+    );
+    if (existNameSubcategory && existNameSubcategory.isActive)
+      throw new BadRequestException(
+        `Already exist subcategory named ${actualName} on this category`,
+      );
   }
 
   private handleExceptions(error: any) {

@@ -23,6 +23,8 @@ import { getNumberOfWeek } from '../common/helpers/getNumberOfWeek';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { CreditPaymentsService } from '../credit_payments/credit_payments.service';
 import { PayInstallmentDto } from './dto/pay-installment.dto';
+import { StatisticsResponseDto } from './dto/statistics-response.dto';
+import { PrincipalAmountsResponseDto } from './dto/principal-amounts-response.dto';
 
 @Injectable()
 export class ExpensesService {
@@ -94,7 +96,7 @@ export class ExpensesService {
   }
 
   async findAll(idAccount: string, queryParameters: PaginationDto) {
-    const { limit = 5, skip = 0 } = queryParameters;
+    const { limit = 10, skip = 0 } = queryParameters;
     const queryBuilder = this.expenseRepository.createQueryBuilder('expense');
 
     try {
@@ -122,9 +124,9 @@ export class ExpensesService {
     }
   }
 
-  async findPrincipalAmounts(idAccount: string) {
-    // const queryBuilder = this.expenseRepository.createQueryBuilder('expenses')
-
+  async findPrincipalAmounts(
+    idAccount: string,
+  ): Promise<PrincipalAmountsResponseDto> {
     const currentDate = new Date();
 
     try {
@@ -191,7 +193,10 @@ export class ExpensesService {
     }
   }
 
-  async statistics(idAccount: string, filters: FiltersExpensesDto) {
+  async statistics(
+    idAccount: string,
+    filters: FiltersExpensesDto,
+  ): Promise<StatisticsResponseDto> {
     const queryBuilder = this.expenseRepository.createQueryBuilder('expense');
     const { conditions, params, accumulateBy } = this.filterExpenses(
       filters,
@@ -206,7 +211,7 @@ export class ExpensesService {
         .where(conditions, params)
         .getMany();
 
-      const expensesForMonthInLastYear =
+      const amountsForMonthInActualYear =
         await this.totalAmountsForMonthInLastYear(idAccount);
 
       const {
@@ -220,11 +225,9 @@ export class ExpensesService {
         totalAmount,
         totalAmountsForCategories,
         totalAmountsForSubcategories,
-        expensesForMonthInLastYear,
+        amountsForMonthInActualYear,
       };
     } catch (error) {
-      console.log(error);
-
       this.handleExceptions(error);
     }
   }
@@ -242,10 +245,10 @@ export class ExpensesService {
       if (expense.account.id !== idAccount)
         this.handleExceptions({
           status: 403,
-          message: `Doesnt exist expensive in this account`,
+          message: `Doesnt exist expense in this account`,
         });
 
-      return expense;
+      return { expense };
     } catch (error) {
       this.handleExceptions(error);
     }
@@ -258,7 +261,7 @@ export class ExpensesService {
     userId: string,
   ) {
     // Recupera gasto a actualizar
-    const expenseToUpdate = await this.findOne(id, idAccount);
+    const { expense: expenseToUpdate } = await this.findOne(id, idAccount);
 
     // Recupera cuenta actual
     const account = await this.findAccount(idAccount);
@@ -311,7 +314,7 @@ export class ExpensesService {
 
   async remove(id: string, idAccount: string, userId: string) {
     // Recupera gasto a eliminar
-    const expense = await this.findOne(id, idAccount);
+    const { expense } = await this.findOne(id, idAccount);
 
     // Recupera cuenta actual
     const account = await this.findAccount(idAccount);

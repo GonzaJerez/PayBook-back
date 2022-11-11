@@ -6,7 +6,7 @@ import { ValidRoles } from '../interfaces';
 
 export function Auth(...roles: ValidRoles[]) {
   return applyDecorators(
-    SetMetadata(META_ROLES,roles),
-    UseGuards(AuthGuard('jwt'), UserRoleGuard)
+    SetMetadata(META_ROLES, roles),
+    UseGuards(AuthGuard('jwt'), UserRoleGuard),
   );
 }

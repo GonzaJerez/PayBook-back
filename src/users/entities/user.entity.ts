@@ -99,10 +99,18 @@ export class User {
   })
   temporalSecurityCode: string;
 
+  @ApiProperty({
+    description: 'Accounts wich this user belong',
+    type: () => [Account],
+  })
   @ManyToMany(() => Account, (account) => account.users, { cascade: true })
   @JoinTable({ name: 'users_accounts' })
   accounts: Account[];
 
+  @ApiProperty({
+    description: 'User creator of this account',
+    type: () => Account,
+  })
   @OneToMany(() => Account, (account) => account.creator_user)
   accounts_owner?: Account[];
 
@@ -110,7 +118,7 @@ export class User {
   accounts_admin?: Account[];
 
   @ApiProperty({
-    type: [Expense],
+    type: () => [Expense],
     description: 'Expenses by this user',
   })
   @OneToMany(
@@ -121,7 +129,7 @@ export class User {
   expenses?: Expense[];
 
   @ApiProperty({
-    type: [CreditPayment],
+    type: () => [CreditPayment],
     description: 'Credit payment by this user',
   })
   @OneToMany(

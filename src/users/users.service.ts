@@ -98,7 +98,7 @@ export class UsersService {
     const existUserWithSameEmail = await this.findUserByEmail(email);
 
     if (existUserWithSameEmail)
-      throw new BadRequestException(
+      throw new UnauthorizedException(
         `Ya se encuentra registrado un usuario con el email "${email}"`,
       );
 

@@ -37,34 +37,14 @@ export class CategoriesService {
     // Busca cuenta actual
     const account = await this.findActualAccount(idAccount);
 
-    // Valida que no exista una categoria activa llamada igual en la misma cuenta
-    const existNameCategory = account.categories.find(
-      (cat) => cat.name === capitalizeName,
-    );
-    if (existNameCategory && existNameCategory.isActive)
-      throw new BadRequestException(
-        `Already exist category named ${capitalizeName} on this account`,
-      );
+    // Valida que no exista categoria activa con el mismo nombre
+    this.validateNameCategory(account, capitalizeName);
 
     try {
-      let category: Category;
-
-      // Si existe categoria eliminada con ese nombre la reactivo
-      if (existNameCategory && !existNameCategory.isActive) {
-        category = {
-          ...existNameCategory,
-          isActive: true,
-          account,
-        };
-      }
-
-      // Si no existia categoria con ese nombre creo una nueva
-      if (!existNameCategory) {
-        category = this.categoryRepository.create({
-          name: capitalizeName,
-          account,
-        });
-      }
+      const category = this.categoryRepository.create({
+        name: capitalizeName,
+        account,
+      });
 
       await this.categoryRepository.save(category);
       delete category.account?.categories;
@@ -108,14 +88,23 @@ export class CategoriesService {
           message: `The category was deleted`,
         });
 
-      return category;
+      return { category };
     } catch (error) {
       this.handleExceptions(error);
     }
   }
 
-  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
-    const category = await this.findOne(id);
+  async update(
+    id: string,
+    updateCategoryDto: UpdateCategoryDto,
+    idAccount: string,
+  ) {
+    const { category } = await this.findOne(id);
+
+    // Busca cuenta actual
+    const account = await this.findActualAccount(idAccount);
+
+    this.validateNameCategory(account, updateCategoryDto.name);
 
     const categoryUpdated = {
       ...category,
@@ -134,9 +123,14 @@ export class CategoriesService {
   }
 
   async remove(id: string) {
-    const category = await this.findOne(id);
+    const { category } = await this.findOne(id);
 
     category.isActive = false;
+
+    category.subcategories = category.subcategories.map((subcat) => ({
+      ...subcat,
+      isActive: false,
+    }));
 
     try {
       await this.categoryRepository.save(category);
@@ -152,9 +146,6 @@ export class CategoriesService {
    * @returns complete exists account
    */
   private async findActualAccount(idAccount: string) {
-    if (!validateUUID(idAccount))
-      throw new BadRequestException(`"idAccount" is not a valid uuid`);
-
     try {
       return await this.accountRepository.findOne({
         where: { id: idAccount },
@@ -163,6 +154,22 @@ export class CategoriesService {
     } catch (error) {
       this.handleExceptions(error);
     }
+  }
+
+  /**
+   * Validates that there is no category in this account with the same name
+   * @param account actual account
+   * @param actualName name category
+   */
+  private validateNameCategory(account: Account, actualName: string) {
+    // Valida que no exista una categoria activa llamada igual en la misma cuenta
+    const existNameCategory = account.categories.find(
+      (cat) => cat.name === actualName,
+    );
+    if (existNameCategory && existNameCategory.isActive)
+      throw new ForbiddenException(
+        `Already exist category named ${actualName} on this account`,
+      );
   }
 
   private handleExceptions(error: any) {

@@ -79,20 +79,41 @@ export class Expense {
   @Column('text')
   day_name: string;
 
+  @ApiProperty({
+    type: () => Account,
+    description: 'Account to wich this expense belongs',
+  })
   @ManyToOne(() => Account, (account) => account.expenses, { eager: true })
   account: Account;
 
+  @ApiProperty({
+    type: () => User,
+    description: 'User who made this expense',
+  })
   @ManyToOne(() => User, (user) => user.expenses, { eager: true })
   user: User;
 
+  @ApiProperty({
+    type: () => Category,
+    description: 'Category to wich this expense belongs',
+  })
   @ManyToOne(() => Category, (category) => category.expenses, { eager: true })
   category: Category;
 
+  @ApiProperty({
+    type: () => Subcategory,
+    description: 'Subcategory to wich this expense belongs',
+  })
   @ManyToOne(() => Subcategory, (subcategory) => subcategory.expenses, {
     eager: true,
   })
   subcategory: Subcategory;
 
+  @ApiProperty({
+    type: () => Account,
+    description:
+      'Credit payment to wich this expense belongs. If this expense is a installment paid',
+  })
   @ManyToOne(() => CreditPayment, (credit_payment) => credit_payment.expenses, {
     nullable: true,
     onDelete: 'CASCADE',

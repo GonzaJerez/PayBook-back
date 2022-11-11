@@ -89,12 +89,12 @@ describe('CategoriesController (e2e)', () => {
         .expect(404);
     });
 
-    it('should return a BadRequest error when already exist category on account with same name', async () => {
+    it('should return a Forbidden error when already exist category on account with same name', async () => {
       await request(app.getHttpServer())
         .post(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}`)
         .auth(userTest1.token, { type: 'bearer' })
         .send(category1)
-        .expect(400);
+        .expect(403);
     });
 
     it('should return a Unauthorized error when user not authenticated', async () => {
@@ -125,27 +125,6 @@ describe('CategoriesController (e2e)', () => {
           expect(res.body.category.account.id).toStrictEqual(accountTest1.id);
           expect(res.body.category.isActive).toBeTruthy();
           expect(typeof res.body.category.id).toBe('string');
-        });
-    });
-
-    it('should return category reactivated when user creates category with same name another category deleted on same account', async () => {
-      // Elimino categoria primero
-      await request(app.getHttpServer())
-        .delete(
-          `${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}/${categoryTest1.id}`,
-        )
-        .auth(userTest1.token, { type: 'bearer' });
-
-      await request(app.getHttpServer())
-        .post(`${BASE_URL}/${accountTest1.id}${COMPLEMENT_URL}`)
-        .auth(userTest1.token, { type: 'bearer' })
-        .send({ name: categoryTest1.name })
-        .expect(201)
-        .then((res) => {
-          expect(res.body.category).toMatchObject({ name: categoryTest1.name });
-          expect(res.body.category.account.id).toBe(accountTest1.id);
-          expect(res.body.category.isActive).toBeTruthy();
-          expect(res.body.category.id).toBe(categoryTest1.id);
         });
     });
   });
@@ -279,10 +258,10 @@ describe('CategoriesController (e2e)', () => {
         .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then(({ body }) => {
-          expect(typeof body.id).toBe('string');
-          expect(body.name).toBe(categoryTest1.name);
-          expect(body.account.id).toBe(accountTest1.id);
-          expect(body.isActive).toBeTruthy();
+          expect(typeof body.category.id).toBe('string');
+          expect(body.category.name).toBe(categoryTest1.name);
+          expect(body.category.account.id).toBe(accountTest1.id);
+          expect(body.category.isActive).toBeTruthy();
         });
     });
   });

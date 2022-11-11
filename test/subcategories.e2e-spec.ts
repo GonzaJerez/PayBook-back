@@ -161,31 +161,6 @@ describe('SubategoriesController (e2e)', () => {
           expect(typeof res.body.subcategory.id).toBe('string');
         });
     });
-
-    it('should return subcategory reactivated when user creates subcategory with same name another subcategory deleted on same category', async () => {
-      // Elimino subcategoria primero
-      await request(app.getHttpServer())
-        .delete(
-          `${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}/${subcategoryTest1.id}`,
-        )
-        .auth(userTest1.token, { type: 'bearer' });
-
-      await request(app.getHttpServer())
-        .post(
-          `${BASE_URL}/${accountTest1.id}/categories/${categoryTest1.id}${COMPLEMENT_URL}`,
-        )
-        .auth(userTest1.token, { type: 'bearer' })
-        .send({ name: subcategoryTest1.name })
-        .expect(201)
-        .then((res) => {
-          expect(res.body.subcategory).toMatchObject({
-            name: subcategoryTest1.name,
-          });
-          expect(res.body.subcategory.category.id).toBe(categoryTest1.id);
-          expect(res.body.subcategory.isActive).toBeTruthy();
-          expect(res.body.subcategory.id).toBe(subcategoryTest1.id);
-        });
-    });
   });
 
   describe('findAll - /accounts/{:idAccount}/categories/{:idCategory}/subcategory (GET)', () => {
@@ -244,7 +219,9 @@ describe('SubategoriesController (e2e)', () => {
         .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then((res) => {
-          expect(res.body).toHaveLength(categoryTest1.subcategories.length);
+          expect(res.body.subcategories).toHaveLength(
+            categoryTest1.subcategories.length,
+          );
         });
     });
 
@@ -263,7 +240,9 @@ describe('SubategoriesController (e2e)', () => {
         .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then((res) => {
-          expect(res.body).toHaveLength(categoryTest1.subcategories.length - 1);
+          expect(res.body.subcategories).toHaveLength(
+            categoryTest1.subcategories.length - 1,
+          );
         });
     });
   });
