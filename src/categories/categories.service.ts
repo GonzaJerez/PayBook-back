@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -7,7 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { validate as validateUUID } from 'uuid';
 
 import { Account } from '../accounts/entities/account.entity';
 import { Repository } from 'typeorm';

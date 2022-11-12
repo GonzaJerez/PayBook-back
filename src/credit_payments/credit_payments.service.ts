@@ -35,7 +35,7 @@ export class CreditPaymentsService {
 
       await this.creditPaymentRepository.save(credit_payment);
 
-      return credit_payment;
+      return { credit_payment };
     } catch (error) {
       this.handleExceptions(error);
     }

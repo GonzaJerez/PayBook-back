@@ -31,9 +31,6 @@ import { UpdateUserDto } from './dtos/update-user.dto';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { CreateSubscriptionDto } from './dtos/create-subscription.dto';
-import { PasswordRecoveryDto } from './dtos/password-recovery.dto';
-import { SecurityCodeDto } from './dtos/security-code.dto';
-import { RenewPasswordDto } from './dtos/renew-password.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -162,38 +159,5 @@ export class UsersController {
   @Auth()
   removePremium(@Param('id', ParseUUIDPipe) id: string, @GetUser() user: User) {
     return this.usersService.removePremium(id, user);
-  }
-
-  @HttpCode(200)
-  @Post('password-recovery')
-  @ApiOkResponse({ description: 'Send email with code security' })
-  @ApiBadRequestResponse({ description: 'Bad request' })
-  @ApiNotFoundResponse({ description: "Can't found user with email" })
-  @ApiForbiddenResponse({
-    description: 'User registred with google, cannot recovery password',
-  })
-  passwordRecovery(@Body() passwordRecoveryDto: PasswordRecoveryDto) {
-    return this.usersService.passwordRecovery(passwordRecoveryDto);
-  }
-
-  @HttpCode(200)
-  @Post('validate-security-code')
-  @ApiOkResponse({ description: 'Code security is valid' })
-  @ApiBadRequestResponse({ description: 'Bad request' })
-  @ApiNotFoundResponse({ description: 'Code security invalid' })
-  validateSecurityCode(@Body() securityCodeDto: SecurityCodeDto) {
-    return this.usersService.validateSecurityCode(securityCodeDto);
-  }
-
-  @HttpCode(200)
-  @Post('renew-password')
-  @ApiOkResponse({ description: 'Password updated' })
-  @ApiBadRequestResponse({ description: 'Bad request' })
-  @ApiNotFoundResponse({ description: "Can't found user with email" })
-  @ApiForbiddenResponse({
-    description: 'Password cannot be the same at last one',
-  })
-  renewPassword(@Body() renewPassword: RenewPasswordDto) {
-    return this.usersService.renewPassword(renewPassword);
   }
 }

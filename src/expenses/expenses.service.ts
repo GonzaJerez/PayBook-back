@@ -74,7 +74,7 @@ export class ExpensesService {
       });
 
       if (createExpenseDto.installments && createExpenseDto.installments > 1) {
-        const credit_payment = await this.creditPaymentsService.create({
+        const { credit_payment } = await this.creditPaymentsService.create({
           account,
           category,
           subcategory,

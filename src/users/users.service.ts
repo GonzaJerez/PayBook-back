@@ -28,16 +28,11 @@ import { generateAccountAccessKey } from '../common/helpers/generateAccountAcces
 import { defaultCategories } from '../categories/data/default-categories';
 import { PASSWORD_TEST } from '../seed/mocks/seedMock';
 import { CreateSubscriptionDto } from './dtos/create-subscription.dto';
-import { PasswordRecoveryDto } from './dtos/password-recovery.dto';
-import { transporter } from '../common/helpers/nodemailer.config';
-import { SecurityCodeDto } from './dtos/security-code.dto';
-import { RenewPasswordDto } from './dtos/renew-password.dto';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger();
   private readonly axios: Axios = axios;
-  private readonly transporter = transporter;
 
   constructor(
     @InjectRepository(User)
@@ -279,109 +274,6 @@ export class UsersService {
     await this.userRepository.save(user);
 
     return { user };
-  }
-
-  async passwordRecovery({ email }: PasswordRecoveryDto) {
-    // Genera código de seguridad de 6 digitos
-    const securityCode = String(Math.floor(Math.random() * 1000000)).padStart(
-      6,
-      '0',
-    );
-
-    try {
-      const user = await this.findUserByEmail(email);
-
-      if (!user)
-        this.handleExceptions({
-          status: 404,
-          message: `No se pudo recuperar el usuario con el email "${email.toLowerCase()}".`,
-        });
-
-      if (user.google)
-        this.handleExceptions({
-          status: 403,
-          message: `El usuario se encuentra registrado con google, no es posible recuperar la contraseña.`,
-        });
-
-      user.temporalSecurityCode = securityCode;
-
-      await this.userRepository.save(user);
-
-      await this.transporter.sendMail({
-        from: `"PayBook" <${this.configService.get('EMAIL_APP')}>`,
-        to: user.email,
-        subject: 'Recupero de contraseña',
-        html: `
-            <p>Tu código para recuperar la contraseña es: </p>
-            <b>${securityCode}<b/>
-        `,
-      });
-
-      return {
-        ok: true,
-        message: 'Código de seguridad enviado por email',
-      };
-    } catch (error) {
-      this.handleExceptions(error);
-    }
-  }
-
-  async validateSecurityCode({ code, email }: SecurityCodeDto) {
-    const user = await this.userRepository.findOneBy({
-      email: email.toLowerCase(),
-      temporalSecurityCode: code,
-    });
-
-    if (!user)
-      this.handleExceptions({
-        status: 404,
-        message: `Código de seguridad inválido`,
-      });
-
-    user.temporalSecurityCode = null;
-
-    await this.userRepository.save(user);
-
-    try {
-      return {
-        ok: true,
-        message: 'Código correcto',
-      };
-    } catch (error) {
-      this.handleExceptions(error);
-    }
-  }
-
-  async renewPassword({ email, password }: RenewPasswordDto) {
-    const user = await this.findUserByEmail(email);
-
-    if (!user)
-      this.handleExceptions({
-        status: 404,
-        message: `No se pudo recuperar el usuario con el email "${email.toLowerCase()}".`,
-      });
-
-    // Validar contraseña nueva
-    const isSameLastPass = bcrypt.compareSync(password, user.password);
-    if (isSameLastPass) {
-      this.handleExceptions({
-        status: 403,
-        message: 'La contraseña no puede ser igual a la anterior',
-      });
-    }
-
-    user.password = bcrypt.hashSync(password, 10);
-
-    await this.userRepository.save(user);
-
-    try {
-      return {
-        ok: true,
-        message: 'Contraseña actualizada correctamente',
-      };
-    } catch (error) {
-      this.handleExceptions(error);
-    }
   }
 
   /**
