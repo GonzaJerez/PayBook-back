@@ -234,7 +234,27 @@ export class ExpensesService {
 
   async findOne(id: string, idAccount: string) {
     try {
-      const expense = await this.expenseRepository.findOneBy({ id });
+      const expense = await this.expenseRepository.findOne({
+        where: { id },
+        select: {
+          amount: true,
+          complete_date: true,
+          day_name: true,
+          id: true,
+          description: true,
+          month: true,
+          num_date: true,
+          week: true,
+          year: true,
+        },
+        relations: {
+          account: true,
+          category: true,
+          credit_payment: true,
+          subcategory: true,
+          user: true,
+        },
+      });
 
       if (!expense)
         this.handleExceptions({

@@ -35,6 +35,16 @@ import { CreditPayment } from './entities/credit_payment.entity';
 export class CreditPaymentsController {
   constructor(private readonly creditPaymentsService: CreditPaymentsService) {}
 
+  @Get(':id')
+  @ApiOkResponse({
+    description: 'Credit_payment by Id',
+    type: [CreditPayment],
+  })
+  @ApiBadRequestResponse({ description: 'Some prop is incorrect' })
+  findOne(@Param('id', ParseUUIDPipe) idCreditPayment: string) {
+    return this.creditPaymentsService.findOne(idCreditPayment);
+  }
+
   @Get()
   @ApiOkResponse({
     description: 'List of credit_payments',
