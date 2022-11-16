@@ -11,7 +11,7 @@ export const mockToCreateExpense = (
     description: 'Expense mock',
     categoryId,
     subcategoryId,
-    complete_date: Date.now(),
+    complete_date: 1652238000000,
     installments: 1,
   };
 };

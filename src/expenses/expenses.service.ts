@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { validate as validateUUID } from 'uuid';
 
 import { Account } from '../accounts/entities/account.entity';
 import { Category } from '../categories/entities/category.entity';
@@ -47,11 +46,12 @@ export class ExpensesService {
     idAccount: string,
     user: User,
   ) {
-    const currentDate = new Date(createExpenseDto.complete_date);
-    const num_date = currentDate.getDate();
-    const month = currentDate.getMonth() + 1;
-    const year = currentDate.getFullYear();
-    const day_name = daysNames[currentDate.getDay()];
+    const date = new Date(createExpenseDto.complete_date);
+    const num_date = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const week = getNumberOfWeek(date);
+    const day_name = daysNames[date.getDay() - 1];
     const category = await this.findCategory(createExpenseDto.categoryId);
     const subcategory = await this.findSubcategory(
       createExpenseDto.subcategoryId,
@@ -70,7 +70,7 @@ export class ExpensesService {
         subcategory,
         account,
         user,
-        week: getNumberOfWeek(),
+        week,
       });
 
       if (createExpenseDto.installments && createExpenseDto.installments > 1) {
@@ -128,6 +128,9 @@ export class ExpensesService {
     idAccount: string,
   ): Promise<PrincipalAmountsResponseDto> {
     const currentDate = new Date();
+    const month = currentDate.getMonth() + 1;
+    const num_date = currentDate.getDate();
+    const year = currentDate.getFullYear();
 
     try {
       const [
@@ -141,8 +144,8 @@ export class ExpensesService {
           .select('SUM(expenses.amount)', 'totalAmountOnMonth')
           .where({
             account: idAccount,
-            month: currentDate.getMonth() + 1,
-            year: currentDate.getFullYear(),
+            month,
+            year,
           })
           .getRawOne(),
         await this.expenseRepository
@@ -150,8 +153,8 @@ export class ExpensesService {
           .select('SUM(expenses.amount)', 'totalAmountOnWeek')
           .where({
             account: idAccount,
-            week: getNumberOfWeek(),
-            year: currentDate.getFullYear(),
+            week: getNumberOfWeek(currentDate),
+            year,
           })
           .getRawOne(),
         await this.expenseRepository
@@ -159,28 +162,46 @@ export class ExpensesService {
           .select('SUM(expenses.amount)', 'totalAmountOnDay')
           .where({
             account: idAccount,
-            num_date: currentDate.getDate(),
-            month: currentDate.getMonth() + 1,
-            year: currentDate.getFullYear(),
+            num_date,
+            month,
+            year,
           })
           .getRawOne(),
         await this.expenseRepository
           .createQueryBuilder('expenses')
           .leftJoin('expenses.subcategory', 'subcat')
-          .select('DISTINCT ON (subcat) subcat.name, expenses.amount amount')
+          .select('subcat.name, expenses.amount amount, expenses.month')
           .leftJoin('expenses.category', 'cat')
-          .where(`expenses.accountId=:idAccount AND cat.name=:nameCategory`, {
-            idAccount,
-            nameCategory: 'Gastos fijos',
-          })
+          .where(
+            `expenses.accountId=:idAccount AND cat.name=:nameCategory AND (expenses.month=:month OR expenses.month=:month - 1)`,
+            {
+              idAccount,
+              nameCategory: 'Gastos fijos',
+              month,
+            },
+          )
           .orderBy('subcat, amount', 'DESC')
           .getRawMany(),
       ]);
 
+      // Si el monto de los gastos fijos del mes pasado es menor al de este mes uso el monto de este mes
       let totalAmountFixedCostsMonthly = 0;
-      fixedCostsMonthly.forEach((el) => {
-        totalAmountFixedCostsMonthly += el.amount;
+      let amountOnLastMonth = 0;
+      let amountOnCurrentMonth = 0;
+
+      fixedCostsMonthly.forEach((el: Expense) => {
+        if (el.month === month - 1) {
+          amountOnLastMonth += el.amount;
+        }
+        if (el.month === month) {
+          amountOnCurrentMonth += el.amount;
+        }
       });
+
+      totalAmountFixedCostsMonthly =
+        amountOnLastMonth > amountOnCurrentMonth
+          ? amountOnLastMonth
+          : amountOnCurrentMonth;
 
       return {
         ...totalAmountOnMonth,
@@ -293,11 +314,12 @@ export class ExpensesService {
     const { categoryId, subcategoryId, complete_date, ...rest } =
       updateExpenseDto;
 
-    const currentDate = new Date(complete_date);
-    const num_date = currentDate.getDate();
-    const month = currentDate.getMonth() + 1;
-    const year = currentDate.getFullYear();
-    const day_name = daysNames[currentDate.getDay()];
+    const date = new Date(complete_date);
+    const num_date = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const day_name = daysNames[date.getDay() - 1];
+    const week = getNumberOfWeek(date);
 
     // Si se quiere actualizar la categoria recupera la nueva, sino toma la categoria de gasto actual
     const category = categoryId
@@ -320,6 +342,7 @@ export class ExpensesService {
       month,
       year,
       day_name,
+      week,
     };
 
     try {
@@ -368,11 +391,12 @@ export class ExpensesService {
     const account = credit_payment.account;
     const user = credit_payment.user;
 
-    const currentDate = new Date(payInstallmentDto.complete_date);
-    const num_date = currentDate.getDate();
-    const month = currentDate.getMonth() + 1;
-    const year = currentDate.getFullYear();
-    const day_name = daysNames[currentDate.getDay()];
+    const date = new Date(payInstallmentDto.complete_date);
+    const num_date = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const day_name = daysNames[date.getDay()];
+    const week = getNumberOfWeek(date);
 
     const expense = this.expenseRepository.create({
       ...payInstallmentDto,
@@ -384,7 +408,7 @@ export class ExpensesService {
       subcategory,
       account,
       user,
-      week: getNumberOfWeek(),
+      week,
     });
 
     expense.credit_payment = credit_payment;

@@ -240,12 +240,12 @@ export class SeedService {
   }
 
   private createExpensesForEachAccount() {
-    const currentDate = new Date();
-    const month = currentDate.getMonth() + 1;
-    const num_date = currentDate.getDate();
-    const year = currentDate.getFullYear();
-    const day_name = daysNames[currentDate.getDay()];
-    const week = getNumberOfWeek();
+    const date = new Date();
+    const month = date.getMonth() + 1;
+    const num_date = date.getDate();
+    const year = date.getFullYear();
+    const day_name = daysNames[date.getDay()];
+    const week = getNumberOfWeek(date);
 
     const mocksExpenses = [
       {

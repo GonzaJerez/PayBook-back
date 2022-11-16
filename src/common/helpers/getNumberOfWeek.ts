@@ -1,10 +1,10 @@
-export const getNumberOfWeek = ()=>{
-    
-    const currentDate = new Date();
-
-    const oneJanuary = new Date(currentDate.getFullYear(),0,1).getTime();
-    const numberOfDays = Math.floor((currentDate.getTime() - oneJanuary) / (1000 * 60 * 60 * 24))
-    const result = Math.ceil((currentDate.getDay() + 1 + numberOfDays) / 7)
-
-    return result;
-}
+export const getNumberOfWeek = (date: Date) => {
+  date.setHours(0, 0, 0, 0); //Nos aseguramos de limpiar la hora.
+  date.setDate(date.getDate() + 4 - (date.getDay() || 7)); // Recorremos los días para asegurarnos de estar "dentro de la semana"
+  //Finalmente, calculamos redondeando y ajustando por la naturaleza de los números en JS:
+  return Math.ceil(
+    ((date.getTime() - new Date(date.getFullYear(), 0, 1).getTime()) / 8.64e7 +
+      1) /
+      7,
+  );
+};

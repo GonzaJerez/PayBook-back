@@ -97,6 +97,8 @@ describe('ExpensesController (e2e)', () => {
           expect(res.body.expense.subcategory.id).toBe(subcategoryTest1.id);
           expect(res.body.expense.account.id).toBe(accountTest1.id);
           expect(res.body.expense.user.id).toBe(userTest1.id);
+          expect(res.body.expense.day_name).toBe('Miercoles');
+          expect(res.body.expense.week).toBe(19);
           expect(typeof res.body.expense.id).toBe('string');
         });
     });

@@ -7,7 +7,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { validate as uuidValidate } from 'uuid';
 import { Repository } from 'typeorm';
 
 import { generateAccountAccessKey } from '../common/helpers/generateAccountAccessKey';
@@ -176,11 +175,6 @@ export class AccountsService {
 
     // Elimina de "account.users" todos los usuarios que envia el cliente
     account.users = account.users.filter((us) => {
-      // for (const userId of pushOutAccountDto.idUsers) {
-      //   if (!uuidValidate(userId)) {
-      //     throw new BadRequestException(`The userIds are not uuid's invalid`);
-      //   }
-      // }
       return !pushOutAccountDto.idUsers.includes(us.id);
     });
 
