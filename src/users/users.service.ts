@@ -11,7 +11,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import axios, { Axios } from 'axios';
-import { ConfigService } from '@nestjs/config';
 
 import { AuthService } from '../auth/auth.service';
 import { ValidRoles } from '../auth/interfaces';
@@ -44,7 +43,6 @@ export class UsersService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Subcategory)
     private readonly subcategoryRepository: Repository<Subcategory>,
-    private readonly configService: ConfigService,
   ) {}
 
   async googleSignIn(loginGoogleDto: LoginGoogleDto) {
@@ -73,10 +71,11 @@ export class UsersService {
 
       if (!user) {
         user = await this.createNewUser(dataToCreateUser, { google: true });
-      } else {
-        const checkedUser = await this.authService.checkIsPremium(user);
-        user = checkedUser.user;
       }
+      // else {
+      //   const checkedUser = await this.authService.checkIsPremium(user);
+      //   user = checkedUser.user;
+      // }
 
       return {
         user,

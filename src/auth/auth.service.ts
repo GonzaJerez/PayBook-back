@@ -81,10 +81,10 @@ export class AuthService {
       delete user.password;
       delete user.accounts;
 
-      const { user: checkedUser } = await this.checkIsPremium(user);
+      // const { user: checkedUser } = await this.checkIsPremium(user);
 
       return {
-        user: checkedUser,
+        user,
         token: this.generateToken({ id: user.id }),
       };
     } catch (error) {
@@ -93,9 +93,9 @@ export class AuthService {
   }
 
   async checkToken(user: User) {
-    const { user: checkedUser } = await this.checkIsPremium(user);
+    // const { user: checkedUser } = await this.checkIsPremium(user);
     return {
-      user: checkedUser,
+      user,
       token: this.generateToken({ id: user.id }),
     };
   }
@@ -111,6 +111,7 @@ export class AuthService {
    */
   async checkIsPremium(user: User) {
     let checkedUser = user;
+
     try {
       const { data } = await this.axios.get(
         `https://api.revenuecat.com/v1/subscribers/${user.revenue_id || ''}`,
@@ -123,6 +124,7 @@ export class AuthService {
           },
         },
       );
+
       if (
         !data?.subscriber?.subscriptions.paybook_pro ||
         data?.subscriber?.subscriptions?.paybook_pro?.unsubscribe_detected_at
@@ -132,6 +134,7 @@ export class AuthService {
           roles: [ValidRoles.USER],
           revenue_id: null,
         };
+
         await this.userRepository.save(checkedUser);
       }
 

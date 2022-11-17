@@ -20,6 +20,7 @@ import { PushOutAccountDto } from './dto/push-out-account.dto';
 import { Category } from '../categories/entities/category.entity';
 import { defaultCategories } from '../categories/data/default-categories';
 import { Subcategory } from '../subcategories/entities/subcategory.entity';
+import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class AccountsService {
@@ -33,6 +34,7 @@ export class AccountsService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Subcategory)
     private readonly subcategoryRepository: Repository<Subcategory>,
+    private readonly authService: AuthService,
   ) {}
 
   async create(createAccountDto: CreateAccountDto, user: User) {
@@ -70,8 +72,24 @@ export class AccountsService {
   }
 
   async findAll(user: User) {
-    const accounts = user.accounts;
-    const totalAccounts = user.accounts.length;
+    const { user: checkedUser } = await this.authService.checkIsPremium(user);
+    let accounts = checkedUser.accounts;
+    let totalAccounts = checkedUser.accounts.length;
+
+    // Si usuario no es premium me aseguro de eliminarlo de todas las cuentas excepto la primera
+    if (!checkedUser.roles.includes(ValidRoles.USER_PREMIUM)) {
+      for (
+        let i = this.LIMIT_FREE_ACCOUNT;
+        i < checkedUser.accounts.length;
+        i++
+      ) {
+        await this.leave(checkedUser.accounts[i].id, checkedUser);
+      }
+      accounts = checkedUser.accounts.filter(
+        (account, idx) => idx < this.LIMIT_FREE_ACCOUNT,
+      );
+      totalAccounts = this.LIMIT_FREE_ACCOUNT;
+    }
 
     return {
       totalAccounts,
@@ -152,9 +170,11 @@ export class AccountsService {
 
         // Si todavia quedan mas usuarios hago el cambio de administrador
         // sino desactivo la cuenta
-        if (account.users.length > 0) {
+        if (account.users.length > 0 && account.admin_user.id === user.id) {
           account.admin_user = account.users[0];
-        } else {
+        }
+
+        if (account.users.length === 0) {
           account.isActive = false;
         }
       }

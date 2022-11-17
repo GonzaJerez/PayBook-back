@@ -16,18 +16,18 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     TypeOrmModule.forFeature([User]),
     // Variables de entorno
     ConfigModule,
-    // Configuracion passport y jwt 
-    PassportModule.register({defaultStrategy:'jwt'}),
+    // Configuracion passport y jwt
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
-      imports:[ConfigModule],
-      inject:[ConfigService],
-      useFactory: (configService:ConfigService)=>{
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
         return {
           secret: configService.get('JWT_SECRET'),
-        }
-      }
-    })
+        };
+      },
+    }),
   ],
-  exports: [TypeOrmModule, PassportModule, JwtModule, JwtStrategy, AuthService]
+  exports: [TypeOrmModule, PassportModule, JwtModule, JwtStrategy, AuthService],
 })
 export class AuthModule {}

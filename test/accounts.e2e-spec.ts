@@ -12,6 +12,8 @@ import {
 import { Account } from '../src/accounts/entities/account.entity';
 import { defaultCategories } from '../src/categories/data/default-categories';
 import { fakeUUID } from '../src/users/mocks/userMocks';
+import { AuthService } from '../src/auth/auth.service';
+import { ValidRoles } from '../src/auth/interfaces';
 
 describe('AccountsController (e2e)', () => {
   let app: INestApplication;
@@ -24,6 +26,10 @@ describe('AccountsController (e2e)', () => {
   let userTest2: UserWithToken;
   let accountTest1: Account;
   let accountTest2: Account;
+
+  const LIMIT_FREE_ACCOUNT = 1;
+
+  let service: AuthService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -42,6 +48,7 @@ describe('AccountsController (e2e)', () => {
     );
 
     await app.init();
+    service = moduleFixture.get<AuthService>(AuthService);
   });
 
   afterAll(async () => {
@@ -180,13 +187,54 @@ describe('AccountsController (e2e)', () => {
   });
 
   describe('findAll - /accounts (GET)', () => {
-    it('should return all accounts', async () => {
+    it('should return all accounts if user is premium', async () => {
+      jest.spyOn(service, 'checkIsPremium').mockImplementation(async () => ({
+        user: {
+          ...userTest1,
+          roles: [ValidRoles.USER_PREMIUM],
+          accounts: userTest1.accounts.map((account) => ({
+            ...account,
+            admin_user: userTest1,
+            creator_user: userTest1,
+            users: [userTest1],
+          })),
+        },
+      }));
+
       await request(app.getHttpServer())
         .get(`${BASE_URL}`)
         .auth(userTest1.token, { type: 'bearer' })
         .expect(200)
         .then((res) => {
           expect(res.body.accounts.length).toBe(res.body.totalAccounts);
+          expect(res.body.accounts.length).toBe(userTest1.accounts.length);
+          expect(res.body.accounts[0]).toHaveProperty('users');
+          expect(res.body.accounts[0]).toHaveProperty('creator_user');
+          expect(res.body.accounts[0]).toHaveProperty('admin_user');
+        });
+    });
+
+    it('should return one account if user is not premium', async () => {
+      jest.spyOn(service, 'checkIsPremium').mockImplementation(async () => ({
+        user: {
+          ...userTest1,
+          roles: [ValidRoles.USER],
+          accounts: userTest1.accounts.map((account) => ({
+            ...account,
+            admin_user: userTest1,
+            creator_user: userTest1,
+            users: [userTest1],
+          })),
+        },
+      }));
+      await request(app.getHttpServer())
+        .get(`${BASE_URL}`)
+        .auth(userTest1.token, { type: 'bearer' })
+        .expect(200)
+        .then((res) => {
+          expect(res.body.accounts.length).toBe(res.body.totalAccounts);
+          expect(res.body.accounts.length).toBe(LIMIT_FREE_ACCOUNT);
+          expect(res.body.accounts[0].id).toBe(userTest1.accounts[0].id);
           expect(res.body.accounts[0]).toHaveProperty('users');
           expect(res.body.accounts[0]).toHaveProperty('creator_user');
           expect(res.body.accounts[0]).toHaveProperty('admin_user');
