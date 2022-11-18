@@ -101,6 +101,17 @@ export const defaultCategories = [
     subcategories: ['Compra general'],
   },
   {
+    name: 'Tecnología',
+    subcategories: [
+      'Accesorios computadora',
+      'Celular',
+      'Computadora',
+      'Notebook',
+      'Smartwatch',
+      'Tablet',
+    ],
+  },
+  {
     name: 'Transporte',
     subcategories: ['SUBE', 'Taxis'],
   },

@@ -71,7 +71,11 @@ export class CreditPaymentsService {
         )
         .getMany();
 
-      return { credit_payments };
+      return {
+        credit_payments: credit_payments.sort((a, _b) =>
+          a.installments === a.installments_paid ? 1 : -1,
+        ),
+      };
     } catch (error) {
       this.handleExceptions(error);
     }
