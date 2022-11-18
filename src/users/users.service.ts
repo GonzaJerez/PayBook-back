@@ -197,6 +197,13 @@ export class UsersService {
           message: `User with id ${id} not found`,
         });
 
+      // Si quiere actualizar siendo user de google
+      if (userToUpdate.google)
+        this.handleExceptions({
+          status: 403,
+          message: `No se puede actualizar usuario logueado con Google`,
+        });
+
       // si actualiza email
       if (email) {
         userToUpdate.email = email.toLowerCase();
@@ -282,9 +289,8 @@ export class UsersService {
    */
   private isAuthUser(userAuth: User, userModifiedId: string) {
     if (
-      (userAuth.id !== userModifiedId &&
-        !userAuth.roles.includes(ValidRoles.ADMIN)) ||
-      userAuth.google
+      userAuth.id !== userModifiedId &&
+      !userAuth.roles.includes(ValidRoles.ADMIN)
     ) {
       this.handleExceptions({
         status: 403,

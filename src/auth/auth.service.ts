@@ -126,8 +126,9 @@ export class AuthService {
       );
 
       if (
-        !data?.subscriber?.subscriptions.paybook_pro ||
-        data?.subscriber?.subscriptions?.paybook_pro?.unsubscribe_detected_at
+        !data?.subscriber?.subscriptions.paybook_premium ||
+        data?.subscriber?.subscriptions?.paybook_premium
+          ?.unsubscribe_detected_at
       ) {
         checkedUser = {
           ...user,
