@@ -112,6 +112,10 @@ export class AuthService {
   async checkIsPremium(user: User) {
     let checkedUser = user;
 
+    if (user.roles.includes(ValidRoles.SUPER_USER)) {
+      return { user };
+    }
+
     try {
       const { data } = await this.axios.get(
         `https://api.revenuecat.com/v1/subscribers/${user.revenue_id || ''}`,

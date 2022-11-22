@@ -77,7 +77,7 @@ export class AccountsService {
     let totalAccounts = checkedUser.accounts.length;
 
     // Si usuario no es premium me aseguro de eliminarlo de todas las cuentas excepto la primera
-    if (!checkedUser.roles.includes(ValidRoles.USER_PREMIUM)) {
+    if (checkedUser.roles.includes(ValidRoles.USER)) {
       for (
         let i = this.LIMIT_FREE_ACCOUNT;
         i < checkedUser.accounts.length;
@@ -148,6 +148,8 @@ export class AccountsService {
       throw new ForbiddenException(
         `The account already has the maximum number of users`,
       );
+
+    this.validateLimitAccounts(user);
 
     account.users = [...account.users, user];
 
@@ -243,7 +245,7 @@ export class AccountsService {
       user.roles.includes(ValidRoles.USER)
     )
       throw new ForbiddenException(
-        'To create a more accounts user needs to be premium',
+        'To create or join to more accounts user needs to be premium',
       );
   }
 
