@@ -73,26 +73,20 @@ export class AccountsService {
 
   async findAll(user: User) {
     const { user: checkedUser } = await this.authService.checkIsPremium(user);
-    let accounts = checkedUser.accounts;
-    let totalAccounts = checkedUser.accounts.length;
+    let accounts = checkedUser.accounts.filter((account) => account.isActive);
 
     // Si usuario no es premium me aseguro de eliminarlo de todas las cuentas excepto la primera
     if (checkedUser.roles.includes(ValidRoles.USER)) {
-      for (
-        let i = this.LIMIT_FREE_ACCOUNT;
-        i < checkedUser.accounts.length;
-        i++
-      ) {
-        await this.leave(checkedUser.accounts[i].id, checkedUser);
+      for (let i = this.LIMIT_FREE_ACCOUNT; i < accounts.length; i++) {
+        await this.leave(accounts[i].id, checkedUser);
       }
-      accounts = checkedUser.accounts.filter(
+      accounts = accounts.filter(
         (account, idx) => idx < this.LIMIT_FREE_ACCOUNT,
       );
-      totalAccounts = this.LIMIT_FREE_ACCOUNT;
     }
 
     return {
-      totalAccounts,
+      totalAccounts: accounts.length,
       accounts,
     };
   }
@@ -309,13 +303,13 @@ export class AccountsService {
     if (!account)
       this.handleExceptions({
         status: 404,
-        message: `Account not found`,
+        message: `Cuenta no encontrada`,
       });
 
     if (!account.isActive && !this.isAdmin(user))
       this.handleExceptions({
         status: 404,
-        message: `The account no longer exists, it was deleted`,
+        message: `La cuenta fue eliminada`,
       });
   }
 

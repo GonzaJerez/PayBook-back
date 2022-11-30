@@ -104,8 +104,8 @@ export class ExpensesService {
         .where({
           account: idAccount,
         })
+        .take(limit)
         .skip(skip)
-        .limit(limit)
         .leftJoinAndSelect('expense.user', 'user')
         .leftJoinAndSelect('expense.category', 'category')
         .leftJoinAndSelect('expense.subcategory', 'subcategory')
